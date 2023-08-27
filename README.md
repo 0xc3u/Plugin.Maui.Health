@@ -47,6 +47,19 @@ You need to add permissions in your Info.plist file to read/write to the HealthK
 <string>We need access to write your steps and other metrics.</string>
 ````
 
+Add ´Entitlements.plist´ to you iOS platform project.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>com.apple.developer.healthkit</key>
+		<true/>
+	</dict>
+</plist>
+````
+
+
 ### Dependency Injection
 
 You will first need to register the `Health` with the `MauiAppBuilder` following the same pattern that the .NET MAUI Essentials libraries follow.

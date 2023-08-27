@@ -6,14 +6,18 @@ public class MainPageViewModel : BaseViewModel
 {
 	readonly IHealth health;
 
-	public ICommand GetStepsCountCommand { get; protected set; }
-	public ICommand WriteStepsCountCommand { get; protected set; }
-
 	double stepsCount;
 	public double StepsCount
 	{
 		get => stepsCount;
 		set => SetProperty(ref stepsCount, value);
+	}
+
+	double bodyMass;
+	public double BodyMass
+	{
+		get => bodyMass;
+		set => SetProperty(ref bodyMass, value);
 	}
 
 	double stepsCountWrite;
@@ -22,6 +26,28 @@ public class MainPageViewModel : BaseViewModel
 		get => stepsCountWrite;
 		set => SetProperty(ref stepsCountWrite, value);
 	}
+
+	double vitaminC;
+	public double VitaminC
+	{
+		get => vitaminC;
+		set => SetProperty(ref vitaminC, value);
+	}
+
+	double vo2max;
+	public double Vo2max
+	{
+		get => vo2max;
+		set => SetProperty(ref vo2max, value);
+	}
+
+	public ICommand ReadStepsCountCommand { get; protected set; }
+	public ICommand WriteStepsCountCommand { get; protected set; }
+	public ICommand ReadBodyMassCommand { get; protected set; }
+	public ICommand ReadVitaminCommand { get; protected set; }
+
+	public ICommand ReadVO2MaxCommand { get; protected set; }
+
 
 	public MainPageViewModel(IHealth health)
 	{
@@ -32,11 +58,14 @@ public class MainPageViewModel : BaseViewModel
 
 	void InitCommands()
 	{
-		GetStepsCountCommand = new Command(async () => await RetrieveStepsCountAsnyc());
+		ReadStepsCountCommand = new Command(async () => await ReadStepsCountAsnyc());
+		ReadBodyMassCommand = new Command(async () => await ReadBodyMassAsnyc());
+		ReadVitaminCommand = new Command(async () => await ReadVitaminCAsnyc());
 		WriteStepsCountCommand = new Command(async () => await WriteStepsCountAsync());
+		ReadVO2MaxCommand = new Command(async () => await ReadVO2MaxAsync());
 	}
 
-	async Task RetrieveStepsCountAsnyc()
+	async Task ReadStepsCountAsnyc()
 	{
 		if (IsBusy)
 		{
@@ -66,6 +95,103 @@ public class MainPageViewModel : BaseViewModel
 			IsBusy = false;
 		}
 	}
+
+	async Task ReadBodyMassAsnyc()
+	{
+		if (IsBusy)
+		{
+			return;
+		}
+
+		IsBusy = true;
+
+		try
+		{
+			var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+			if (hasPermission)
+			{
+				var weight = await health.ReadLatestAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+				BodyMass = weight ?? 0;
+			}
+			else
+			{
+				await App.Current.MainPage.DisplayAlert("Permission", $"No '{Health.Enums.HealthParameter.BodyMass}' Permission granted", "Ok");
+			}
+		}
+		catch (HealthException hex)
+		{
+			await App.Current.MainPage.DisplayAlert("Error", hex.Message, "Ok");
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
+	async Task ReadVitaminCAsnyc()
+	{
+		if (IsBusy)
+		{
+			return;
+		}
+
+		IsBusy = true;
+
+		try
+		{
+			var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.DietaryVitaminC, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+			if (hasPermission)
+			{
+				var vitaminC = await health.ReadLatestAsync(Enums.HealthParameter.DietaryVitaminC, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Milligrams);
+				VitaminC = vitaminC ?? 0;
+			}
+			else
+			{
+				await App.Current.MainPage.DisplayAlert("Permission", $"No '{Health.Enums.HealthParameter.DietaryVitaminC}' Permission granted", "Ok");
+			}
+		}
+		catch (HealthException hex)
+		{
+			await App.Current.MainPage.DisplayAlert("Error", hex.Message, "Ok");
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
+	async Task ReadVO2MaxAsync()
+	{
+		if (IsBusy)
+		{
+			return;
+		}
+
+		IsBusy = true;
+
+		try
+		{
+			var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.VO2Max, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+			if (hasPermission)
+			{
+				var vo2max = await health.ReadLatestAsync(Enums.HealthParameter.VO2Max, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Concentration.MillilitersPerKilogramPerMinute);
+				Vo2max = (vo2max ?? 0) * 1000;
+			}
+			else
+			{
+				await App.Current.MainPage.DisplayAlert("Permission", $"No '{Health.Enums.HealthParameter.VO2Max}' Permission granted", "Ok");
+			}
+		}
+		catch (HealthException hex)
+		{
+			await App.Current.MainPage.DisplayAlert("Error", hex.Message, "Ok");
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
 
 	async Task WriteStepsCountAsync()
 	{
@@ -98,6 +224,6 @@ public class MainPageViewModel : BaseViewModel
 	public override void OnAppearing(object param)
 	{
 		StepsCount = 0;
-
+		BodyMass = 0;
 	}
 }

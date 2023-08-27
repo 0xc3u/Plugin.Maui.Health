@@ -73,7 +73,8 @@ partial class HealthDataProviderImplementation : IHealth
 		{HealthParameter.DietaryMolybdenum, HKQuantityTypeIdentifier.DietaryMolybdenum},
 		{HealthParameter.DietaryChloride, HKQuantityTypeIdentifier.DietaryChloride},
 		{HealthParameter.DietaryPotassium, HKQuantityTypeIdentifier.DietaryPotassium},
-		{HealthParameter.DietaryCaffeine, HKQuantityTypeIdentifier.DietaryCaffeine}
+		{HealthParameter.DietaryCaffeine, HKQuantityTypeIdentifier.DietaryCaffeine},
+		{HealthParameter.VO2Max, HKQuantityTypeIdentifier.VO2Max},
 	};
 
 	public bool IsSupported => HKHealthStore.IsHealthDataAvailable;
@@ -449,7 +450,17 @@ partial class HealthDataProviderImplementation : IHealth
 				{
 					if (error == null && results?.Length > 0 && results[0] is HKQuantitySample sample)
 					{
-						double? returnValue = sample.Quantity.GetDoubleValue(HKUnit.FromString(unit));
+						HKUnit hkUnit;
+						if (unit == Constants.Units.Concentration.MillilitersPerKilogramPerMinute)
+						{
+							hkUnit = HKUnit.Liter.UnitDividedBy(HKUnit.FromString(Maui.Health.Constants.Units.Mass.Kilograms).UnitMultipliedBy(HKUnit.Minute));
+						}
+						else
+						{
+							hkUnit = HKUnit.FromString(unit);
+						}
+
+						double? returnValue = sample.Quantity.GetDoubleValue(hkUnit);
 						tcs.SetResult(returnValue);
 					}
 					else

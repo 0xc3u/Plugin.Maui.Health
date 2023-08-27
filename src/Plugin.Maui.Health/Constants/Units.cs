@@ -1,4 +1,6 @@
-﻿namespace Plugin.Maui.Health.Constants;
+﻿using System.Runtime.ConstrainedExecution;
+
+namespace Plugin.Maui.Health.Constants;
 
 public static class Units
 {
@@ -67,6 +69,7 @@ public static class Units
 		public static string MillimolesPerLiter = "mmol<L";
 		public static string MilligramsPerDeciliter = "mg/dL";
 		public static string InternationalUnits => "IU";
+		public static string MillilitersPerKilogramPerMinute => "ml/kg/min";
 	}
 
 	public static class Others

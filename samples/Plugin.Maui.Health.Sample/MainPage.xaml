@@ -4,30 +4,102 @@
 			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
 			 x:DataType="vm:MainPageViewModel"
-             Title="Feature Plugin">
-
+             Title="Plugin.Maui.Health Sample">
 	<ScrollView>
-	<VerticalStackLayout Padding="20">
+		<VerticalStackLayout Padding="20" Spacing="10">
 
-		<ActivityIndicator IsRunning="{Binding IsBusy}"></ActivityIndicator>
-		
-		<Button Command="{Binding GetStepsCountCommand}" Text="Read Stepscount"></Button>
-		<Label>
-			<Label.FormattedText>
-				<FormattedString>
-					<FormattedString.Spans>
-						<Span Text="Steps"></Span>
-						<Span Text=" "></Span>
-						<Span Text="{Binding StepsCount}"></Span>
-					</FormattedString.Spans>
-				</FormattedString>
-			</Label.FormattedText>
-		</Label>
+			<ActivityIndicator IsRunning="{Binding IsBusy}"></ActivityIndicator>
 
-		<Line BackgroundColor="LightBlue" />
 
-			<Entry Text="{Binding StepsCountWrite}" Placeholder="Steps" Keyboard="Numeric"/>
-			<Button Command="{Binding WriteStepsCountCommand}" Text="Write Stepscount"></Button>
+			<Frame Padding="5">
+				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Step Count" 
+						   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+					<Label Grid.Row="1" Grid.Column="0" >
+						<Label.FormattedText>
+							<FormattedString>
+								<FormattedString.Spans>
+									<Span Text="Steps" FontAttributes="Bold"></Span>
+									<Span Text=" "></Span>
+									<Span Text="{Binding StepsCount}"></Span>
+								</FormattedString.Spans>
+							</FormattedString>
+						</Label.FormattedText>
+					</Label>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadStepsCountCommand}" Text="Read"></Button>
+					<Entry Grid.Row="2" Grid.Column="0" Text="{Binding StepsCountWrite}" Placeholder="Steps" Keyboard="Numeric"/>
+					<Button Grid.Row="2" Grid.Column="1" Command="{Binding WriteStepsCountCommand}" Text="Write"></Button>
+				</Grid>
+			</Frame>
+
+			<Line BackgroundColor="{x:StaticResource Primary}" />
+
+
+			<Frame Padding="5">
+				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Body Mass" 
+				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+					<Label Grid.Row="1" Grid.Column="0" >
+						<Label.FormattedText>
+							<FormattedString>
+								<FormattedString.Spans>
+									<Span Text="Body Mass" FontAttributes="Bold"></Span>
+									<Span Text=" "></Span>
+									<Span Text="{Binding BodyMass, StringFormat='{0:F2} kg'}"></Span>
+								</FormattedString.Spans>
+							</FormattedString>
+						</Label.FormattedText>
+					</Label>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadBodyMassCommand}" Text="Read"></Button>
+				</Grid>
+			</Frame>
+
+			<Line BackgroundColor="{x:StaticResource Primary}" />
+
+			<Frame Padding="5">
+				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin C" 
+				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+					<Label Grid.Row="1" Grid.Column="0" >
+						<Label.FormattedText>
+							<FormattedString>
+								<FormattedString.Spans>
+									<Span Text="Vitamin C" FontAttributes="Bold"></Span>
+									<Span Text=" "></Span>
+									<Span Text="{Binding VitaminC, StringFormat='{0:F2} mg'}"></Span>
+								</FormattedString.Spans>
+							</FormattedString>
+						</Label.FormattedText>
+					</Label>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminCommand}" Text="Read"></Button>
+				</Grid>
+			</Frame>
+
+			<Line BackgroundColor="{x:StaticResource Primary}" />
+
+			<Frame Padding="5">
+				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="V2Omax" 
+						FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+					<Label Grid.Row="1" Grid.Column="0" >
+						<Label.FormattedText>
+							<FormattedString>
+								<FormattedString.Spans>
+									<Span Text="V2Omax" FontAttributes="Bold"></Span>
+									<Span Text=" "></Span>
+									<Span Text="{Binding Vo2max, StringFormat='{0:F2}'}"></Span>
+								</FormattedString.Spans>
+							</FormattedString>
+						</Label.FormattedText>
+					</Label>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVO2MaxCommand}" Text="Read"></Button>
+				</Grid>
+			</Frame>
+
 
 		</VerticalStackLayout>
 
