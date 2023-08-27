@@ -130,3 +130,5 @@ Asynchronously writes a count-based health value to the HealthKit store.
 # Acknowledgements
 
 This project could not have came to be without these projects and people, thank you! <3
+
+- We thank Gerald Versluis (@jfversluis) for his excellent template [Plugin.Maui.Template](https://github.com/jfversluis/Plugin.Maui.Feature)
