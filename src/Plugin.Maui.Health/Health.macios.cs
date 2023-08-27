@@ -76,13 +76,21 @@ partial class HealthDataProviderImplementation : IHealth
 		{HealthParameter.DietaryCaffeine, HKQuantityTypeIdentifier.DietaryCaffeine}
 	};
 
-	public bool IsHealthDataSupported => HKHealthStore.IsHealthDataAvailable;
+	public bool IsSupported => HKHealthStore.IsHealthDataAvailable;
 
 	readonly SemaphoreSlim semaphore = new(1, 1);
 
+	/// <summary>
+	/// Asynchronously checks and requests the specified permissions for a given health parameter.
+	/// </summary>
+	/// <param name="healthParameter">The health parameter for which to check or request permission.</param>
+	/// <param name="permissionType">The type of permission to check or request. Can be Read, Write, or both.</param>
+	/// <returns>Returns a <see cref="Task{TResult}"/> representing the asynchronous operation, with a <see cref="bool"/> result indicating the success of the operation.</returns>
+	/// <exception cref="HealthException">Throws when HealthKit is not available, the health parameter is not available, or permission is not granted.</exception>
+
 	public async Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType)
 	{
-		if (!IsHealthDataSupported)
+		if (!IsSupported)
 		{
 			throw new HealthException("HealthKit not available on your device");
 		}

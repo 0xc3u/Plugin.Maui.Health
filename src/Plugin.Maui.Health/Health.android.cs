@@ -4,7 +4,7 @@ namespace Plugin.Maui.Health;
 
 partial class HealthDataProviderImplementation : IHealth
 {
-	public bool IsHealthDataSupported => throw new NotImplementedException();
+	public bool IsSupported => throw new NotImplementedException();
 
 	public Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType)
 	{

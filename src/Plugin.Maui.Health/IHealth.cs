@@ -4,7 +4,7 @@ namespace Plugin.Maui.Health;
 
 public interface IHealth
 {
-	bool IsHealthDataSupported { get; }
+	bool IsSupported { get; }
 	Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType);
 	Task<double> ReadCountAsync(HealthParameter healthParameter, DateTime from, DateTime until);
 	Task<double?> ReadLatestAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit);
