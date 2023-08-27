@@ -5,7 +5,7 @@
 
 
 ## Build Status
-![ci](https://github.com/github/docs/actions/workflows/ci.yml/badge.svg)
+![ci](https://github.com/0xc3u/Plugin.Maui.Health/actions/workflows/ci.yml/badge.svg)
 
 
 ## Install Plugin
