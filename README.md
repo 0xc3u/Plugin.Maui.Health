@@ -3,6 +3,11 @@
 
 `Plugin.Maui.Health` provides the ability to access personal health data in your .NET MAUI application.
 
+
+## Build Status
+![ci](https://github.com/github/docs/actions/workflows/ci.yml/badge.svg)
+
+
 ## Install Plugin
 
 [![NuGet](https://img.shields.io/nuget/v/Plugin.Maui.Health.svg?label=NuGet)](https://www.nuget.org/packages/Plugin.Maui.Health/)
