@@ -103,7 +103,10 @@ public class HealthViewModel
 
 #### Sample App
 
-![alt text](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample.png?raw=true)
+![Screenshot of the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample.png?raw=true)
+
+![Screenshot of the permission granted to the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_permissions.png?raw=true)
+
 
 Try the sample app to test the plugin by your own.
 
@@ -120,13 +123,13 @@ Gets a value indicating whether reading the Health is supported on this device.
 
 #### Methods
 
-##### `CheckPermissionAsync`
+##### CheckPermissionAsync
 Asynchronously checks and requests the specified permissions for a given health parameter.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
 ```
 
-##### `ReadCountAsync`
+##### ReadCountAsync
 Asynchronously reads the cumulative count of a specified "HealthParameter" within a given date range.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
@@ -136,7 +139,7 @@ Asynchronously reads the cumulative count of a specified "HealthParameter" withi
 	}
 ```
 
-##### `ReadLatestAsync`
+##### ReadLatestAsync
 Asynchronously reads the latest health data value for a specified  "HealthParameter"  within a given date range.
 ```csharp
 var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
@@ -146,7 +149,7 @@ if (hasPermission)
 }
 ```
 
-##### `WriteAsync`
+##### WriteAsync
 Asynchronously writes a count-based health value to the HealthKit store.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
@@ -156,6 +159,9 @@ Asynchronously writes a count-based health value to the HealthKit store.
 	}
 ```
 
+#### Remarks
+When using the Plugin, make sure that you pass the correct HealthParameter with the corresponding unit to the methods.
+There is a utility class called Constants.Units that contains the supported units.
 
 # Acknowledgements
 
