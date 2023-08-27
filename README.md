@@ -18,7 +18,7 @@ Install with the dotnet CLI: `dotnet add package Plugin.Maui.Health`, or through
 
 ## API Usage
 
-`Plugin.Maui.Health` provides the `Health` class that has a single property `Property` that you can get or set.
+`Plugin.Maui.Health` provides the `HealthDataProvider` class that has a single property `Property` that you can get or set.
 
 You can either use it as a static class, e.g.: `Health.Default.Property = 1` or with dependency injection: `builder.Services.AddSingleton<IHealth>(Health.Default);`
 
@@ -100,9 +100,16 @@ public class HealthViewModel
 }
 ```
 
-### Health
 
-Once you have created a `Health` you can interact with it in the following ways:
+#### Sample App
+
+![alt text](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample.png?raw=true)
+
+Try the sample app to test the plugin by your own.
+
+### Health Plugin
+
+Once you have registered the `Health` plugin you can interact with it in the following ways:
 
 #### Properties
 
@@ -127,6 +134,16 @@ Asynchronously reads the cumulative count of a specified "HealthParameter" withi
 	{
 		var stepsCount = await health.ReadCountAsync(Enums.HealthParameter.StepCount, DateTime.Now.AddDays(-1), DateTime.Now);
 	}
+```
+
+##### `ReadLatestAsync`
+Asynchronously reads the latest health data value for a specified  "HealthParameter"  within a given date range.
+```csharp
+var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+if (hasPermission)
+{
+	var bodyMass = await health.ReadLatestAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+}
 ```
 
 ##### `WriteAsync`
