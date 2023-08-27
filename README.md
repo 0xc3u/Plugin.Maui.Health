@@ -17,6 +17,16 @@ Install with the dotnet CLI: `dotnet add package Plugin.Maui.Health`, or through
 
 You can either use it as a static class, e.g.: `Health.Default.Property = 1` or with dependency injection: `builder.Services.AddSingleton<IHealth>(Health.Default);`
 
+
+### Platform supported
+
+| Platform | Minimum Version Supported |
+|----------|--------------------------|
+| iOS      | 14.0+                     |
+| Android  | currently not supported        |
+
+
+
 ### Permissions
 
 Before you can start using Health, you will need to request the proper permissions on each platform.
@@ -31,10 +41,6 @@ You need to add permissions in your Info.plist file to read/write to the HealthK
 <key>NSHealthUpdateUsageDescription</key>
 <string>We need access to write your steps and other metrics.</string>
 ````
-
-#### Android
-
-No permissions are needed for Android.
 
 ### Dependency Injection
 
@@ -55,9 +61,6 @@ public class HealthViewModel
     {
         this.Health = Health;
     }
-
-	
-   
 }
 ```
 
