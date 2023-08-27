@@ -16,8 +16,8 @@
 		<Authors>INDIKO</Authors>
 		<Copyright>Copyright © INDIKO and contributors</Copyright>
 		<IsPackable>True</IsPackable>
-		<PackageProjectUrl>https://github.com/jfversluis/Plugin.Maui.Feature</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfversluis/Plugin.Maui.Feature</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/0xc3u/Plugin.Maui.Health</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/0xc3u/Plugin.Maui.Health</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>dotnet-maui;maui;plugin;healthkit;</PackageTags>
 		<IncludeSymbols>True</IncludeSymbols>
