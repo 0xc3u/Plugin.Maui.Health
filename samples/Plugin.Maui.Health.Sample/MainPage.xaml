@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             x:Class="Plugin.Maui.Health.Sample.MainPage"
+			 x:DataType="vm:MainPageViewModel"
+             Title="Feature Plugin">
+
+	<ScrollView>
+	<VerticalStackLayout Padding="20">
+
+		<ActivityIndicator IsRunning="{Binding IsBusy}"></ActivityIndicator>
+		
+		<Button Command="{Binding GetStepsCountCommand}" Text="Read Stepscount"></Button>
+		<Label>
+			<Label.FormattedText>
+				<FormattedString>
+					<FormattedString.Spans>
+						<Span Text="Steps"></Span>
+						<Span Text=" "></Span>
+						<Span Text="{Binding StepsCount}"></Span>
+					</FormattedString.Spans>
+				</FormattedString>
+			</Label.FormattedText>
+		</Label>
+
+		<Line BackgroundColor="LightBlue" />
+
+			<Entry Text="{Binding StepsCountWrite}" Placeholder="Steps" Keyboard="Numeric"/>
+			<Button Command="{Binding WriteStepsCountCommand}" Text="Write Stepscount"></Button>
+
+		</VerticalStackLayout>
+
+	</ScrollView>
+
+</ContentPage>
