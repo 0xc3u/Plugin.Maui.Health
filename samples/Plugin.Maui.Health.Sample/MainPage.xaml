@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
 			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+			 xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
 			 x:DataType="vm:MainPageViewModel"
              Title="Plugin.Maui.Health Sample">
@@ -37,7 +38,7 @@
 
 
 			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+				<Grid RowDefinitions="Auto,Auto,Auto, Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
 					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Body Mass" 
 				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
 
@@ -53,6 +54,30 @@
 						</Label.FormattedText>
 					</Label>
 					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadBodyMassCommand}" Text="Read"></Button>
+
+					<CollectionView Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+									ItemsSource="{Binding BodyMassSamples}" ItemSizingStrategy="MeasureFirstItem"
+									HeightRequest="150">
+						<CollectionView.ItemTemplate>
+							<DataTemplate x:DataType="m:Sample">
+								<Grid ColumnDefinitions="*,*">
+									<Label Grid.Column="0" Text="{Binding From}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start"></Label>
+									<Label Grid.Column="1" Text="{Binding Value}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start">
+										<Label.FormattedText>
+											<FormattedString>
+												<FormattedString.Spans>
+													<Span Text="{Binding Value, StringFormat='{0:F2}'}"></Span>
+													<Span Text=" "></Span>
+													<Span Text="{Binding Unit}"></Span>
+												</FormattedString.Spans>
+											</FormattedString>
+										</Label.FormattedText>
+									</Label>
+								</Grid>
+							</DataTemplate>
+						</CollectionView.ItemTemplate>
+					</CollectionView>
+					
 				</Grid>
 			</Frame>
 

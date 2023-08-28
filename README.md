@@ -120,17 +120,21 @@ Once you have registered the `Health` plugin you can interact with it in the fol
 
 Gets a value indicating whether reading the Health is supported on this device.
 
+#### Models
+
+##### `Sample`
+Represents a health-related sample, containing information such as time range, value, source, and unit.
 
 #### Methods
 
 ##### CheckPermissionAsync
-Asynchronously checks and requests the specified permissions for a given health parameter.
+Checks and requests the specified permissions for a given health parameter.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
 ```
 
 ##### ReadCountAsync
-Asynchronously reads the cumulative count of a specified "HealthParameter" within a given date range.
+Reads the cumulative count of a specified "HealthParameter" within a given date range.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
 	if (hasPermission)
@@ -140,7 +144,7 @@ Asynchronously reads the cumulative count of a specified "HealthParameter" withi
 ```
 
 ##### ReadLatestAsync
-Asynchronously reads the latest health data value for a specified  "HealthParameter"  within a given date range.
+Reads the latest health data value for a specified  "HealthParameter"  within a given date range.
 ```csharp
 var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
 if (hasPermission)
@@ -149,8 +153,48 @@ if (hasPermission)
 }
 ```
 
+##### ReadAverageAsync
+Reads the average value of a specified "HealthParameter" within a given date range.
+```csharp
+var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+if (hasPermission)
+{
+	var avgBodyMass = health.ReadAverageAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+}
+```
+
+##### ReadMinAsync
+Reads the min value of a specified "HealthParameter" within a given date range.
+```csharp
+var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+if (hasPermission)
+{
+	var minBodyMass = health.ReadMinAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+}
+```
+
+##### ReadMaxAsync
+Reads the max value of a specified "HealthParameter" within a given date range.
+```csharp
+var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+if (hasPermission)
+{
+	var maxBodyMass = health.ReadMaxAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+}
+```
+
+##### ReadAllAsync
+Reads all health data for a specified "HealthParameter" within a given date range and returns them as a list of "Sample" objects.
+```csharp
+var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+if (hasPermission)
+{
+	var maxBodySamples = health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+}
+```
+
 ##### WriteAsync
-Asynchronously writes a count-based health value to the HealthKit store.
+Writes a health value to the HealthKit store.
 ```csharp
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
 	if (hasPermission)
@@ -158,6 +202,7 @@ Asynchronously writes a count-based health value to the HealthKit store.
 		await health.WriteAsync(Health.Enums.HealthParameter.StepCount, DateTime.Now, 250);
 	}
 ```
+
 
 #### Remarks
 When using the Plugin, make sure that you pass the correct HealthParameter with the corresponding unit to the methods.

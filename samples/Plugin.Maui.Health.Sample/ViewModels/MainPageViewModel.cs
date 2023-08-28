@@ -1,4 +1,5 @@
-﻿using System.Windows.Input;
+﻿using System.Collections.ObjectModel;
+using System.Windows.Input;
 using Plugin.Maui.Health.Exceptions;
 
 namespace Plugin.Maui.Health.Sample.ViewModels;
@@ -39,6 +40,13 @@ public class MainPageViewModel : BaseViewModel
 	{
 		get => vo2max;
 		set => SetProperty(ref vo2max, value);
+	}
+
+	ObservableCollection<Models.Sample> bodyMassSamples;
+	public ObservableCollection<Models.Sample> BodyMassSamples
+	{
+		get => bodyMassSamples;
+		set => SetProperty(ref bodyMassSamples, value);
 	}
 
 	public ICommand ReadStepsCountCommand { get; protected set; }
@@ -110,8 +118,13 @@ public class MainPageViewModel : BaseViewModel
 			var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
 			if (hasPermission)
 			{
-				var weight = await health.ReadLatestAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-				BodyMass = weight ?? 0;
+				var bodyMass = await health.ReadLatestAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+
+				var avg = await health.ReadAverageAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+
+				BodyMass = bodyMass ?? 0;
+
+				await ReadAllBodyMassSamplesAsync();
 			}
 			else
 			{
@@ -127,6 +140,28 @@ public class MainPageViewModel : BaseViewModel
 			IsBusy = false;
 		}
 	}
+
+	async Task ReadAllBodyMassSamplesAsync()
+	{
+		try
+		{
+			var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+			if (hasPermission)
+			{
+				var bodyMassSamples = await health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+				BodyMassSamples = new ObservableCollection<Models.Sample>(bodyMassSamples);
+			}
+			else
+			{
+				await App.Current.MainPage.DisplayAlert("Permission", $"No '{Health.Enums.HealthParameter.BodyMass}' Permission granted", "Ok");
+			}
+		}
+		catch (HealthException hex)
+		{
+			await App.Current.MainPage.DisplayAlert("Error", hex.Message, "Ok");
+		}
+	}
+
 
 	async Task ReadVitaminCAsnyc()
 	{
@@ -225,5 +260,6 @@ public class MainPageViewModel : BaseViewModel
 	{
 		StepsCount = 0;
 		BodyMass = 0;
+		BodyMassSamples = new ObservableCollection<Models.Sample>();
 	}
 }

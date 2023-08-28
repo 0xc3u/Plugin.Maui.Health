@@ -1,6 +1,7 @@
 ﻿using HealthKit;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
+using Plugin.Maui.Health.Models;
 
 namespace Plugin.Maui.Health;
 
@@ -82,7 +83,7 @@ partial class HealthDataProviderImplementation : IHealth
 	readonly SemaphoreSlim semaphore = new(1, 1);
 
 	/// <summary>
-	/// Asynchronously checks and requests the specified permissions for a given health parameter.
+	/// Checks and requests the specified permissions for a given health parameter.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to check or request permission.</param>
 	/// <param name="permissionType">The type of permission to check or request. Can be Read, Write, or both.</param>
@@ -145,7 +146,7 @@ partial class HealthDataProviderImplementation : IHealth
 	}
 
 	/// <summary>
-	/// Asynchronously reads the cumulative count of a specified <see cref="HealthParameter"/> within a given date range.
+	/// Reads the cumulative count of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve the cumulative count (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -215,7 +216,7 @@ partial class HealthDataProviderImplementation : IHealth
 
 
 	/// <summary>
-	/// Asynchronously reads the average value of a specified <see cref="HealthParameter"/> within a given date range.
+	/// Reads the average value of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve the average value (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -232,56 +233,28 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var averageHeartRate = await ReadAverageAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
-		await semaphore.WaitAsync();
-		var tcs = new TaskCompletionSource<double>();
-
 		try
 		{
-			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
+			if (valuesRead != null)
 			{
-				throw new HealthException($"{healthParameter} not available");
+				return valuesRead.Average(e=>e.Value);
 			}
-
-			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-
-			var predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
-
-			HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
-				(HKStatisticsQuery _, HKStatistics result, NSError error) =>
-				{
-					if (error == null && result != null)
-					{
-						HKQuantity sum = result.AverageQuantity();
-						if (sum != null)
-						{
-							double returnValue = sum.GetDoubleValue(HKUnit.FromString(unit));
-							tcs.SetResult(returnValue);
-						}
-					}
-					else
-					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
-					}
-				});
-
-			healthStore.ExecuteQuery(query);
+			else
+			{
+				return null;
+			}
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			throw new HealthException(ex.Message, ex);
 		}
-		finally
-		{
-			semaphore.Release();
-		}
-
-		return await tcs.Task;
 	}
 
 	/// <summary>
-	/// Asynchronously reads the minimum value of a specified <see cref="HealthParameter"/> within a given date range.
+	/// Reads the minimum value of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve the minimum value (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -298,56 +271,28 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var minHeartRate = await ReadMinAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double> ReadMinAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadMinAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
-		await semaphore.WaitAsync();
-		var tcs = new TaskCompletionSource<double>();
-
 		try
 		{
-			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
+			if (valuesRead != null)
 			{
-				throw new HealthException($"{healthParameter} not available");
+				return valuesRead.Min(e=>e.Value);
 			}
-
-			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-
-			var predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
-
-			HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
-				(HKStatisticsQuery _, HKStatistics result, NSError error) =>
-				{
-					if (error == null && result != null)
-					{
-						HKQuantity sum = result.MinimumQuantity();
-						if (sum != null)
-						{
-							double returnValue = sum.GetDoubleValue(HKUnit.FromString(unit));
-							tcs.SetResult(returnValue);
-						}
-					}
-					else
-					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
-					}
-				});
-
-			healthStore.ExecuteQuery(query);
+			else
+			{
+				return null;
+			}
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			throw new HealthException(ex.Message, ex);
 		}
-		finally
-		{
-			semaphore.Release();
-		}
-
-		return await tcs.Task;
 	}
 
 	/// <summary>
-	/// Asynchronously reads the maximum value of a specified <see cref="HealthParameter"/> within a given date range.
+	/// Reads the maximum value of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve the maximum value (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -364,56 +309,28 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var maxHeartRate = await ReadMaxAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
-		await semaphore.WaitAsync();
-		var tcs = new TaskCompletionSource<double>();
-
 		try
 		{
-			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
+			if (valuesRead != null)
 			{
-				throw new HealthException($"{healthParameter} not available");
+				return valuesRead.Max(e=>e.Value);
 			}
-
-			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-
-			var predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
-
-			HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
-				(HKStatisticsQuery _, HKStatistics result, NSError error) =>
-				{
-					if (error == null && result != null)
-					{
-						HKQuantity sum = result.MaximumQuantity();
-						if (sum != null)
-						{
-							double returnValue = sum.GetDoubleValue(HKUnit.FromString(unit));
-							tcs.SetResult(returnValue);
-						}
-					}
-					else
-					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
-					}
-				});
-
-			healthStore.ExecuteQuery(query);
+			else
+			{
+				return null;
+			}
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			throw new HealthException(ex.Message, ex);
 		}
-		finally
-		{
-			semaphore.Release();
-		}
-
-		return await tcs.Task;
 	}
 
 	/// <summary>
-	/// Asynchronously reads the latest health data value for a specified <see cref="HealthParameter"/> within a given date range.
+	/// Reads the latest health data value for a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve the latest data (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -484,7 +401,7 @@ partial class HealthDataProviderImplementation : IHealth
 	}
 
 	/// <summary>
-	/// Asynchronously reads all health data for a specified <see cref="HealthParameter"/> within a given date range and returns them as a list of <see cref="double"/>.
+	/// Reads all health data for a specified <see cref="HealthParameter"/> within a given date range and returns them as a list of <see cref="Sample"/>.
 	/// </summary>
 	/// <param name="healthParameter">The health parameter for which to retrieve data (e.g., StepCount, HeartRate).</param>
 	/// <param name="from">The start date for the date range within which to retrieve health data.</param>
@@ -501,10 +418,10 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var heartRates = await ReadAllAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "count/min");
 	/// </code>
 	/// </example>
-	public async Task<List<double>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		await semaphore.WaitAsync();
-		var tcs = new TaskCompletionSource<List<double>>();
+		var tcs = new TaskCompletionSource<List<Sample>>();
 
 		try
 		{
@@ -516,15 +433,31 @@ partial class HealthDataProviderImplementation : IHealth
 			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
 			NSPredicate predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
 
-			List<double> healthValues = new();
+			List<Sample> healthValues = new();
 
 			HKSampleQuery query = new(quantityType, predicate, HKSampleQuery.NoLimit, new NSSortDescriptor[] { new NSSortDescriptor(HKSample.SortIdentifierEndDate, true) },
 				(HKSampleQuery _, HKSample[] results, NSError error) =>
 				{
 					if (error == null && results != null)
 					{
-						healthValues.AddRange(from HKQuantitySample sample in results.Cast<HKQuantitySample>()
-											  select sample.Quantity.GetDoubleValue(HKUnit.FromString(unit)));
+						foreach(HKQuantitySample hkSample in results.Cast<HKQuantitySample>())
+						{
+							if (hkSample == null){
+								continue;
+							}
+
+							var source = string.Empty;
+
+							if (hkSample.Source != null)
+							{
+								source = hkSample?.Source.Name;
+							}
+							var sample = new Sample((DateTime)hkSample.StartDate, (DateTime)hkSample.EndDate,
+									hkSample.Quantity.GetDoubleValue(HKUnit.FromString(unit)),
+									source,
+									unit);
+							healthValues.Add(sample);
+						}
 						tcs.SetResult(healthValues);
 					}
 					else
@@ -548,7 +481,7 @@ partial class HealthDataProviderImplementation : IHealth
 	}
 
 	/// <summary>
-	/// Asynchronously writes a count-based health value to the HealthKit store.
+	/// Writes a count-based health value to the HealthKit store.
 	/// </summary>
 	/// <param name="healthParameter">The type of health parameter to write (e.g., steps, heart rate).</param>
 	/// <param name="date">The date associated with the value to store. If null, the current date and time is used.</param>

@@ -1,4 +1,5 @@
 ﻿using Plugin.Maui.Health.Enums;
+using Plugin.Maui.Health.Models;
 
 namespace Plugin.Maui.Health;
 
@@ -11,12 +12,12 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
-	public Task<List<double>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<double> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
 	}
@@ -31,12 +32,12 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
-	public Task<double> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<double> ReadMinAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public Task<double?> ReadMinAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
 	}
