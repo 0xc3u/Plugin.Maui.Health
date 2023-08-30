@@ -104,5 +104,5 @@ public enum HealthParameter
 	AtrialFibrillationBurden,
 	SleepingWristTemperature,
 	UnderwaterDepth,
-	WaterTemperature
+	WaterTemperature,
 }

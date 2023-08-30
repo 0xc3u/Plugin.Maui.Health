@@ -3,16 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
 			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
 			 xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
+			 xmlns:m2="clr-namespace:Plugin.Maui.Health.Sample.Models"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
 			 x:DataType="vm:MainPageViewModel"
              Title="Plugin.Maui.Health Sample">
-	<ScrollView>
-		<VerticalStackLayout Padding="20" Spacing="10">
+
+	
+	<VerticalStackLayout Padding="20" Spacing="10">
 
 			<ActivityIndicator IsRunning="{Binding IsBusy}"></ActivityIndicator>
 
+			<CollectionView ItemsSource="{Binding MenuItems}" ItemSizingStrategy="MeasureFirstItem">
+			<CollectionView.ItemTemplate>
+				<DataTemplate x:DataType="m2:MenuItem">
+					<Grid Padding="10" RowDefinitions="Auto, 5" ColumnDefinitions="*">
+						<Grid.GestureRecognizers>
+							<TapGestureRecognizer NumberOfTapsRequired="1"
+								Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainPageViewModel}}, Path=OpenViewCommand}"		
+								CommandParameter="{Binding .}" />
+						</Grid.GestureRecognizers>
+						<Label Grid.Row="0" Grid.Column="0" Text="{Binding Title}" FontAttributes="Bold" FontSize="Medium" VerticalOptions="Center" HorizontalOptions="Start"></Label>
+						<Line Grid.Row="1" Grid.Column="0" BackgroundColor="{StaticResource Primary}" HeightRequest="1" VerticalOptions="Center" HorizontalOptions="Center"></Line>
+					</Grid>
+				</DataTemplate>
+			</CollectionView.ItemTemplate>
+			</CollectionView>
+				
 
-			<Frame Padding="5">
+			<!--<Frame Padding="5">
 				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
 					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Step Count" 
 						   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
@@ -28,7 +46,7 @@
 							</FormattedString>
 						</Label.FormattedText>
 					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadStepsCountCommand}" Text="Read"></Button>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadStepsCountAsnycCommand}" Text="Read"></Button>
 					<Entry Grid.Row="2" Grid.Column="0" Text="{Binding StepsCountWrite}" Placeholder="Steps" Keyboard="Numeric"/>
 					<Button Grid.Row="2" Grid.Column="1" Command="{Binding WriteStepsCountCommand}" Text="Write"></Button>
 				</Grid>
@@ -53,7 +71,7 @@
 							</FormattedString>
 						</Label.FormattedText>
 					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadBodyMassCommand}" Text="Read"></Button>
+					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadAllBodyMassSamplesCommand}" Text="Read"></Button>
 
 					<CollectionView Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
 									ItemsSource="{Binding BodyMassSamples}" ItemSizingStrategy="MeasureFirstItem"
@@ -83,7 +101,7 @@
 
 			<Line BackgroundColor="{x:StaticResource Primary}" />
 
-			<Frame Padding="5">
+			--><!--<Frame Padding="5">
 				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
 					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin C" 
 				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
@@ -103,7 +121,7 @@
 				</Grid>
 			</Frame>
 
-			<Line BackgroundColor="{x:StaticResource Primary}" />
+			<Line BackgroundColor="{x:StaticResource Primary}" />--><!--
 
 			<Frame Padding="5">
 				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
@@ -123,11 +141,10 @@
 					</Label>
 					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVO2MaxCommand}" Text="Read"></Button>
 				</Grid>
-			</Frame>
+			</Frame>-->
 
 
 		</VerticalStackLayout>
 
-	</ScrollView>
 
 </ContentPage>

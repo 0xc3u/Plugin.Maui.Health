@@ -78,6 +78,80 @@ partial class HealthDataProviderImplementation : IHealth
 		{HealthParameter.VO2Max, HKQuantityTypeIdentifier.VO2Max},
 	};
 
+	readonly Dictionary<WorkoutType, HKWorkoutActivityType> workoutTypeMapping = new()
+	{
+		{WorkoutType.AmericanFootball, HKWorkoutActivityType.AmericanFootball},
+		{WorkoutType.Archery, HKWorkoutActivityType.Archery},
+		{WorkoutType.AustralianFootball, HKWorkoutActivityType.AustralianFootball},
+		{WorkoutType.Badminton, HKWorkoutActivityType.Badminton},
+		{WorkoutType.Baseball, HKWorkoutActivityType.Baseball},
+		{WorkoutType.Basketball, HKWorkoutActivityType.Basketball},
+		{WorkoutType.Bowling, HKWorkoutActivityType.Bowling},
+		{WorkoutType.Boxing, HKWorkoutActivityType.Boxing},
+		{WorkoutType.Climbing, HKWorkoutActivityType.Climbing},
+		{WorkoutType.Cricket, HKWorkoutActivityType.Cricket},
+		{WorkoutType.CrossTraining, HKWorkoutActivityType.CrossTraining},
+		{WorkoutType.Curling, HKWorkoutActivityType.Curling},
+		{WorkoutType.Cycling, HKWorkoutActivityType.Cycling},
+		{WorkoutType.Dance, HKWorkoutActivityType.Dance},
+		{WorkoutType.DanceInspiredTraining, HKWorkoutActivityType.DanceInspiredTraining},
+		{WorkoutType.Elliptical, HKWorkoutActivityType.Elliptical},
+		{WorkoutType.EquestrianSports, HKWorkoutActivityType.EquestrianSports},
+		{WorkoutType.Fencing, HKWorkoutActivityType.Fencing},
+		{WorkoutType.Fishing, HKWorkoutActivityType.Fishing},
+		{WorkoutType.FunctionalStrengthTraining, HKWorkoutActivityType.FunctionalStrengthTraining},
+		{WorkoutType.Golf, HKWorkoutActivityType.Golf},
+		{WorkoutType.Gymnastics, HKWorkoutActivityType.Gymnastics},
+		{WorkoutType.Handball, HKWorkoutActivityType.Handball},
+		{WorkoutType.Hiking, HKWorkoutActivityType.Hiking},
+		{WorkoutType.Hockey, HKWorkoutActivityType.Hockey},
+		{WorkoutType.Hunting, HKWorkoutActivityType.Hunting},
+		{WorkoutType.Lacrosse, HKWorkoutActivityType.Lacrosse},
+		{WorkoutType.MartialArts, HKWorkoutActivityType.MartialArts},
+		{WorkoutType.MindAndBody, HKWorkoutActivityType.MindAndBody},
+		{WorkoutType.MixedMetabolicCardioTraining, HKWorkoutActivityType.MixedMetabolicCardioTraining},
+		{WorkoutType.PaddleSports, HKWorkoutActivityType.PaddleSports},
+		{WorkoutType.Play, HKWorkoutActivityType.Play},
+		{WorkoutType.PreparationAndRecovery, HKWorkoutActivityType.PreparationAndRecovery},
+		{WorkoutType.Racquetball, HKWorkoutActivityType.Racquetball},
+		{WorkoutType.Rowing, HKWorkoutActivityType.Rowing},
+		{WorkoutType.Rugby, HKWorkoutActivityType.Rugby},
+		{WorkoutType.Running, HKWorkoutActivityType.Running},
+		{WorkoutType.Sailing, HKWorkoutActivityType.Sailing},
+		{WorkoutType.SkatingSports, HKWorkoutActivityType.SkatingSports},
+		{WorkoutType.SnowSports, HKWorkoutActivityType.SnowSports},
+		{WorkoutType.Soccer, HKWorkoutActivityType.Soccer},
+		{WorkoutType.Softball, HKWorkoutActivityType.Softball},
+		{WorkoutType.Squash, HKWorkoutActivityType.Squash},
+		{WorkoutType.StairClimbing, HKWorkoutActivityType.StairClimbing},
+		{WorkoutType.SurfingSports, HKWorkoutActivityType.SurfingSports},
+		{WorkoutType.Swimming, HKWorkoutActivityType.Swimming},
+		{WorkoutType.TableTennis, HKWorkoutActivityType.TableTennis},
+		{WorkoutType.Tennis, HKWorkoutActivityType.Tennis},
+		{WorkoutType.TrackAndField, HKWorkoutActivityType.TrackAndField},
+		{WorkoutType.TraditionalStrengthTraining, HKWorkoutActivityType.TraditionalStrengthTraining},
+		{WorkoutType.Volleyball, HKWorkoutActivityType.Volleyball},
+		{WorkoutType.Walking, HKWorkoutActivityType.Walking},
+		{WorkoutType.WaterFitness, HKWorkoutActivityType.WaterFitness},
+		{WorkoutType.WaterPolo, HKWorkoutActivityType.WaterPolo},
+		{WorkoutType.WaterSports, HKWorkoutActivityType.WaterSports},
+		{WorkoutType.Wrestling, HKWorkoutActivityType.Wrestling},
+		{WorkoutType.Yoga, HKWorkoutActivityType.Yoga},
+		{WorkoutType.Barre, HKWorkoutActivityType.Barre},
+		{WorkoutType.CoreTraining, HKWorkoutActivityType.CoreTraining},
+		{WorkoutType.CrossCountrySkiing, HKWorkoutActivityType.CrossCountrySkiing},
+		{WorkoutType.DownhillSkiing, HKWorkoutActivityType.DownhillSkiing},
+		{WorkoutType.Flexibility, HKWorkoutActivityType.Flexibility},
+		{WorkoutType.HighIntensityIntervalTraining, HKWorkoutActivityType.HighIntensityIntervalTraining},
+		{WorkoutType.JumpRope, HKWorkoutActivityType.JumpRope},
+		{WorkoutType.Kickboxing, HKWorkoutActivityType.Kickboxing},
+		{WorkoutType.Pilates, HKWorkoutActivityType.Pilates},
+		{WorkoutType.Snowboarding, HKWorkoutActivityType.Snowboarding},
+		{WorkoutType.Stairs, HKWorkoutActivityType.Stairs},
+		{WorkoutType.StepTraining, HKWorkoutActivityType.StepTraining},
+		{WorkoutType.Other, HKWorkoutActivityType.Other},
+	};
+
 	public bool IsSupported => HKHealthStore.IsHealthDataAvailable;
 
 	readonly SemaphoreSlim semaphore = new(1, 1);
@@ -89,7 +163,6 @@ partial class HealthDataProviderImplementation : IHealth
 	/// <param name="permissionType">The type of permission to check or request. Can be Read, Write, or both.</param>
 	/// <returns>Returns a <see cref="Task{TResult}"/> representing the asynchronous operation, with a <see cref="bool"/> result indicating the success of the operation.</returns>
 	/// <exception cref="HealthException">Throws when HealthKit is not available, the health parameter is not available, or permission is not granted.</exception>
-
 	public async Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType)
 	{
 		if (!IsSupported)
@@ -133,7 +206,7 @@ partial class HealthDataProviderImplementation : IHealth
 				throw new HealthException($"No write permission granted for {healthParameter}");
 			}
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			throw new HealthException(ex.Message, ex);
 		}
@@ -178,31 +251,31 @@ partial class HealthDataProviderImplementation : IHealth
 
 			var predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
 
-			
-				HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
-					(HKStatisticsQuery _, HKStatistics result, NSError error) =>
+
+			HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
+				(HKStatisticsQuery _, HKStatistics result, NSError error) =>
+				{
+					if (error == null && result != null)
 					{
-						if (error == null && result != null)
+						HKQuantity sum = result.SumQuantity();
+						if (sum != null)
 						{
-							HKQuantity sum = result.SumQuantity();
-							if (sum != null)
-							{
-								tcs.SetResult(sum.GetDoubleValue(HKUnit.Count));
-							}
-							else
-							{
-								tcs.SetResult(0);
-							}
+							tcs.SetResult(sum.GetDoubleValue(HKUnit.Count));
 						}
 						else
 						{
-							tcs.SetException(new HealthException(error?.LocalizedDescription ?? "An error occurred"));
+							tcs.SetResult(0);
 						}
-					});
+					}
+					else
+					{
+						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "An error occurred"));
+					}
+				});
 
-				healthStore.ExecuteQuery(query);
+			healthStore.ExecuteQuery(query);
 
-				return await tcs.Task;
+			return await tcs.Task;
 		}
 		catch (Exception ex)
 		{
@@ -240,7 +313,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
 			if (valuesRead != null)
 			{
-				return valuesRead.Average(e=>e.Value);
+				return valuesRead.Average(e => e.Value);
 			}
 			else
 			{
@@ -278,7 +351,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
 			if (valuesRead != null)
 			{
-				return valuesRead.Min(e=>e.Value);
+				return valuesRead.Min(e => e.Value);
 			}
 			else
 			{
@@ -316,7 +389,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
 			if (valuesRead != null)
 			{
-				return valuesRead.Max(e=>e.Value);
+				return valuesRead.Max(e => e.Value);
 			}
 			else
 			{
@@ -365,24 +438,29 @@ partial class HealthDataProviderImplementation : IHealth
 			HKSampleQuery query = new(quantityType, predicate, 1, new NSSortDescriptor[] { new NSSortDescriptor(HKSample.SortIdentifierEndDate, false) },
 				(HKSampleQuery _, HKSample[] results, NSError error) =>
 				{
-					if (error == null && results?.Length > 0 && results[0] is HKQuantitySample sample)
+					if (error == null && results?.Length > 0)
 					{
-						HKUnit hkUnit;
-						if (unit == Constants.Units.Concentration.MillilitersPerKilogramPerMinute)
+						if(results[0] is HKQuantitySample sample)
 						{
-							hkUnit = HKUnit.Liter.UnitDividedBy(HKUnit.FromString(Maui.Health.Constants.Units.Mass.Kilograms).UnitMultipliedBy(HKUnit.Minute));
+							HKUnit hkUnit = GetHKUnit(unit);
+							double? returnValue = sample.Quantity.GetDoubleValue(hkUnit);
+							tcs.SetResult(returnValue);
 						}
 						else
 						{
-							hkUnit = HKUnit.FromString(unit);
+							tcs.SetResult(0d);
 						}
-
-						double? returnValue = sample.Quantity.GetDoubleValue(hkUnit);
-						tcs.SetResult(returnValue);
 					}
 					else
 					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
+						if (error != null)
+						{
+							tcs.SetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
+						}
+						else
+						{
+							tcs.SetResult(0d);
+						}
 					}
 				});
 
@@ -440,9 +518,10 @@ partial class HealthDataProviderImplementation : IHealth
 				{
 					if (error == null && results != null)
 					{
-						foreach(HKQuantitySample hkSample in results.Cast<HKQuantitySample>())
+						foreach (HKQuantitySample hkSample in results.Cast<HKQuantitySample>())
 						{
-							if (hkSample == null){
+							if (hkSample == null)
+							{
 								continue;
 							}
 
@@ -452,8 +531,11 @@ partial class HealthDataProviderImplementation : IHealth
 							{
 								source = hkSample?.Source.Name;
 							}
+
+							HKUnit hkUnit = GetHKUnit(unit);
+
 							var sample = new Sample((DateTime)hkSample.StartDate, (DateTime)hkSample.EndDate,
-									hkSample.Quantity.GetDoubleValue(HKUnit.FromString(unit)),
+									hkSample.Quantity.GetDoubleValue(hkUnit),
 									source,
 									unit);
 							healthValues.Add(sample);
@@ -499,7 +581,7 @@ partial class HealthDataProviderImplementation : IHealth
 	/// <exception cref="HealthException">
 	/// Thrown when the specified health parameter is not available, when saving fails, or any other health-related error occurs.
 	/// </exception>
-	public async Task<bool> WriteAsync(HealthParameter healthParameter, DateTime? date, double valueToStore)
+	public async Task<bool> WriteAsync(HealthParameter healthParameter, DateTime? date, double valueToStore, string unit)
 	{
 		await semaphore.WaitAsync();
 
@@ -512,6 +594,8 @@ partial class HealthDataProviderImplementation : IHealth
 				throw new HealthException($"{healthParameter} not available");
 			}
 
+			
+
 			var currentDate = DateTime.Now;
 			if (date.HasValue)
 			{
@@ -520,9 +604,10 @@ partial class HealthDataProviderImplementation : IHealth
 
 			NSDate startDate = (NSDate)currentDate;
 			NSDate endDate = startDate.AddSeconds(1);
+			HKUnit hkUnit = GetHKUnit(unit);
 
 			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-			HKQuantity quantity = HKQuantity.FromQuantity(HKUnit.Count, valueToStore);
+			HKQuantity quantity = HKQuantity.FromQuantity(hkUnit, valueToStore);
 
 			NSDictionary metaData = new(HKMetadataKey.WasUserEntered, new NSNumber(true));
 			HKQuantitySample sample = HKQuantitySample.FromType(quantityType, quantity, startDate, endDate, metaData);
@@ -540,7 +625,7 @@ partial class HealthDataProviderImplementation : IHealth
 			});
 			return await tcs.Task;
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			throw new HealthException(ex.Message, ex);
 		}
@@ -548,5 +633,21 @@ partial class HealthDataProviderImplementation : IHealth
 		{
 			semaphore.Release();
 		}
+	}
+
+	static HKUnit GetHKUnit(string unit)
+	{
+		HKUnit hkUnit;
+
+		if (unit == Constants.Units.Concentration.MillilitersPerKilogramPerMinute)
+		{
+			hkUnit = HKUnit.Liter.UnitDividedBy(HKUnit.FromString(Maui.Health.Constants.Units.Mass.Kilograms).UnitMultipliedBy(HKUnit.Minute));
+		}
+		else
+		{
+			hkUnit = HKUnit.FromString(unit);
+		}
+
+		return hkUnit;
 	}
 }

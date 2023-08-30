@@ -1,35 +1,27 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Plugin.Maui.Health.Sample.Interfaces;
+using Plugin.Maui.Health.Sample.Services;
 
 namespace Plugin.Maui.Health.Sample.ViewModels;
 
-public abstract class BaseViewModel : INotifyPropertyChanged
+public partial class BaseViewModel : ObservableObject, IViewModel
+{
+	public IHealth Health { get; }
+	public INavigationService Navigationservice { get; }
+
+	[ObservableProperty]
+	bool isBusy;
+
+	public BaseViewModel(IHealth health, INavigationService navigationService)
 	{
-		bool isBusy;
-		public bool IsBusy
-		{
-			get => isBusy;
-			set => SetProperty(ref isBusy, value);
-		}
-
-		public event PropertyChangedEventHandler PropertyChanged;
-		protected void RaisePropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-		/// <summary>
-		/// Set a property and raise a property changed event if it has changed
-		/// </summary>
-		protected bool SetProperty<T>(ref T property, T value, [CallerMemberName] string propertyName = null)
-		{
-			if (EqualityComparer<T>.Default.Equals(property, value))
-			{
-				return false;
-			}
-
-			property = value;
-			RaisePropertyChanged(propertyName);
-			return true;
-		}
-
-		public abstract void OnAppearing(object param);
+		Health = health;
+		Navigationservice = navigationService;
 	}
+
+	public virtual void OnAppearing(object param) { }
+
+	public virtual Task RefreshAsync()
+	{
+		return Task.CompletedTask;
+	}
+}

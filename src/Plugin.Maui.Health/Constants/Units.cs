@@ -1,6 +1,4 @@
-﻿using System.Runtime.ConstrainedExecution;
-
-namespace Plugin.Maui.Health.Constants;
+﻿namespace Plugin.Maui.Health.Constants;
 
 public static class Units
 {
@@ -65,9 +63,9 @@ public static class Units
 
 	public static class Concentration
 	{
-		public static string MolesPerLiter = "mol<L";
-		public static string MillimolesPerLiter = "mmol<L";
-		public static string MilligramsPerDeciliter = "mg/dL";
+		public static string MolesPerLiter => "mol<L";
+		public static string MillimolesPerLiter => "mmol<L";
+		public static string MilligramsPerDeciliter => "mg/dL";
 		public static string InternationalUnits => "IU";
 		public static string MillilitersPerKilogramPerMinute => "ml/kg/min";
 	}
@@ -79,71 +77,3 @@ public static class Units
 		public static string Count => "count";
 	}
 }
-
-
-/*BodyMassIndex: No unit (it's a ratio)
-BodyFatPercentage: Percent (%)
-Height: Meters (m), Feet (ft), Centimeters (cm), Inches (in)
-BodyMass: Kilograms (kg), Pounds (lb)
-LeanBodyMass: Kilograms (kg), Pounds (lb)
-HeartRate: Beats per Minute (bpm)
-StepCount: Count
-DistanceWalkingRunning: Meters (m), Kilometers (km), Feet (ft), Miles (mi)
-DistanceCycling: Meters (m), Kilometers (km), Feet (ft), Miles (mi)
-BasalEnergyBurned: Kilocalories (kcal), Kilojoules (kJ)
-ActiveEnergyBurned: Kilocalories (kcal), Kilojoules (kJ)
-FlightsClimbed: Count
-NikeFuel: No unit (proprietary)
-OxygenSaturation: Percent (%)
-BloodGlucose: mg/dL, mmol/L
-BloodPressureSystolic: mmHg
-BloodPressureDiastolic: mmHg
-BloodAlcoholContent: Percent (%)
-PeripheralPerfusionIndex: Percent (%)
-ForcedVitalCapacity: Liters (L)
-ForcedExpiratoryVolume1: Liters (L)
-PeakExpiratoryFlowRate: L/min
-NumberOfTimesFallen: Count
-InhalerUsage: Count
-RespiratoryRate: Breaths per Minute
-BodyTemperature: Degrees Celsius (°C), Degrees Fahrenheit (°F)
-DietaryFatTotal: Grams (g)
-DietaryFatPolyunsaturated: Grams (g)
-DietaryFatMonounsaturated: Grams (g)
-DietaryFatSaturated: Grams (g)
-DietaryCholesterol: mg
-DietarySodium: mg
-DietaryCarbohydrates: Grams (g)
-DietaryFiber: Grams (g)
-DietarySugar: Grams (g)
-DietaryEnergyConsumed: Kilocalories (kcal), Kilojoules (kJ)
-DietaryProtein: Grams (g)
-DietaryVitaminA: IU (International Units)
-DietaryVitaminB6: mg
-DietaryVitaminB12: µg (Micrograms)
-DietaryVitaminC: mg
-DietaryVitaminD: IU (International Units)
-DietaryVitaminE: mg
-DietaryVitaminK: µg (Micrograms)
-DietaryCalcium: mg
-DietaryIron: mg
-DietaryThiamin: mg
-DietaryRiboflavin: mg
-DietaryNiacin: mg
-DietaryFolate: µg (Micrograms)
-DietaryBiotin: µg (Micrograms)
-DietaryPantothenicAcid: mg
-DietaryPhosphorus: mg
-DietaryIodine: µg (Micrograms)
-DietaryMagnesium: mg
-DietaryZinc: mg
-DietarySelenium: µg (Micrograms)
-DietaryCopper: mg
-DietaryManganese: mg
-DietaryChromium: µg (Micrograms)
-DietaryMolybdenum: µg (Micrograms)
-DietaryChloride: mg
-DietaryPotassium: mg
-DietaryCaffeine: mg
-UnderwaterDepth: Meters (m)
-WaterTemperature: Degrees Celsius (°C), Degrees Fahrenheit (°F)*/

@@ -17,6 +17,11 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
+	public Task<List<Workout>> ReadAllWorkoutsAsync(WorkoutType workoutType, DateTime from, DateTime until)
+	{
+		throw new NotImplementedException();
+	}
+
 	public Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
@@ -32,6 +37,11 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
+	public Task<Workout?> ReadLatestWorkoutAsync(WorkoutType workoutType, DateTime from, DateTime until)
+	{
+		throw new NotImplementedException();
+	}
+
 	public Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();
@@ -42,7 +52,7 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> WriteAsync(HealthParameter healthParameter, DateTime? date, double valueToStore)
+	public Task<bool> WriteAsync(HealthParameter healthParameter, DateTime? date, double valueToStore, string unit)
 	{
 		throw new NotImplementedException();
 	}

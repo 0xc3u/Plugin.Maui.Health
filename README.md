@@ -100,42 +100,41 @@ public class HealthViewModel
 }
 ```
 
-
-#### Sample App
-
-![Screenshot of the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample.png?raw=true)
-
-![Screenshot of the permission granted to the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_permissions.png?raw=true)
-
-
-Try the sample app to test the plugin by your own.
-
 ### Health Plugin
 
 Once you have registered the `Health` plugin you can interact with it in the following ways:
 
 #### Properties
 
-##### `IsSupported`
-
-Gets a value indicating whether reading the Health is supported on this device.
+- `IsSupported` _Gets a value indicating whether reading the Health is supported on this device._
 
 #### Models
 
-##### `Sample`
-Represents a health-related sample, containing information such as time range, value, source, and unit.
+- `Sample` _Represents a health-related sample, containing information such as time range, value, source, and unit._
 
 #### Methods
 
-##### CheckPermissionAsync
-Checks and requests the specified permissions for a given health parameter.
+- `CheckPermissionAsync` _Checks and requests the specified permissions for a given health parameter._
+- `ReadCountAsync` _Reads the cumulative count of a specified "HealthParameter" within a given date range._
+- `ReadLatestAsync` _Reads the latest health data value for a specified  "HealthParameter"  within a given date range._
+- `ReadAverageAsync` _Reads the average value of a specified "HealthParameter" within a given date range._
+- `ReadMinAsync` _Reads the min value of a specified "HealthParameter" within a given date range._
+- `ReadMaxAsync` _Reads the max value of a specified "HealthParameter" within a given date range._
+- `ReadAllAsync` _Reads all health data for a specified "HealthParameter" within a given date range and returns them as a list of `Sample` objects._
+- `WriteAsync` _Writes a value for a specified "HealthParameter" to the HealthKit store._
+
+
+#### Examples
+
+##### Checking Permissions
 ```csharp
-	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
+	// check if user granted permission for reading and writing the step count
+	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
 ```
 
-##### ReadCountAsync
-Reads the cumulative count of a specified "HealthParameter" within a given date range.
+##### Reading a value
 ```csharp
+	// reading the steps count from the health kit
 	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
 	if (hasPermission)
 	{
@@ -143,65 +142,28 @@ Reads the cumulative count of a specified "HealthParameter" within a given date 
 	}
 ```
 
-##### ReadLatestAsync
-Reads the latest health data value for a specified  "HealthParameter"  within a given date range.
+#####  Writing a value
 ```csharp
-var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
-if (hasPermission)
-{
-	var bodyMass = await health.ReadLatestAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-}
-```
+	// writing the body mass into the health kit
 
-##### ReadAverageAsync
-Reads the average value of a specified "HealthParameter" within a given date range.
-```csharp
-var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
-if (hasPermission)
-{
-	var avgBodyMass = health.ReadAverageAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-}
-```
-
-##### ReadMinAsync
-Reads the min value of a specified "HealthParameter" within a given date range.
-```csharp
-var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
-if (hasPermission)
-{
-	var minBodyMass = health.ReadMinAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-}
-```
-
-##### ReadMaxAsync
-Reads the max value of a specified "HealthParameter" within a given date range.
-```csharp
-var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
-if (hasPermission)
-{
-	var maxBodyMass = health.ReadMaxAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-}
-```
-
-##### ReadAllAsync
-Reads all health data for a specified "HealthParameter" within a given date range and returns them as a list of "Sample" objects.
-```csharp
-var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.BodyMass, Health.Enums.PermissionType.Read | Health.Enums.PermissionType.Write);
-if (hasPermission)
-{
-	var maxBodySamples = health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
-}
-```
-
-##### WriteAsync
-Writes a health value to the HealthKit store.
-```csharp
-	var hasPermission = await health.CheckPermissionAsync(Health.Enums.HealthParameter.StepCount, Health.Enums.PermissionType.Write);
+	var hasPermission = await Health.CheckPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
 	if (hasPermission)
 	{
-		await health.WriteAsync(Health.Enums.HealthParameter.StepCount, DateTime.Now, 250);
+		await Health.WriteAsync(HealthParameter.BodyMass, DateTime.Now, NewBodyMass, Units.Mass.Kilograms);
 	}
 ```
+
+#### Sample App
+
+![Screenshot of the sample app - Dashboard](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_dashboard.png?raw=true)
+![Screenshot of the sample app - Vitamins](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_vitamins.png?raw=true)
+![Screenshot of the sample app - Body Measurements](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_bodym.png?raw=true)
+![Screenshot of the permission granted to the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_permissions.png?raw=true)
+
+
+Try the sample app to test the plugin by your own.
+
+
 
 
 #### Remarks

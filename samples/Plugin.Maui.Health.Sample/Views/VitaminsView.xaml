@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+			 xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
+             x:Class="Plugin.Maui.Health.Sample.Views.VitaminsView"
+			 x:DataType="vm:VitaminsViewViewModel"						
+             Title="Vitamins">
+		<ScrollView Orientation="Vertical">
+
+		<VerticalStackLayout Spacing="10" Padding="10">
+
+			<ActivityIndicator IsRunning="{Binding IsBusy}"/>
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin C"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminC, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminCCommand}" Text="Read"></Button>
+
+						<Entry Grid.Row="2" Grid.Column="0" Text="{Binding NewVitaminC}" Placeholder="Steps" Keyboard="Numeric"/>
+						<Button Grid.Row="2" Grid.Column="1" Command="{Binding WriteVitaminCCommand}" Text="Write"></Button>
+
+					</Grid>
+				</Frame>
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin K"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminK, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminKCommand}" Text="Read"></Button>
+					</Grid>
+				</Frame>
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin D"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminD, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminDCommand}" Text="Read"></Button>
+					</Grid>
+				</Frame>
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin E"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminE, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminECommand}" Text="Read"></Button>
+					</Grid>
+				</Frame>
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin B6"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminB6, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminB6Command}" Text="Read"></Button>
+					</Grid>
+				</Frame>
+
+
+				<Frame Padding="5">
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin B12"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+
+						<Label Grid.Row="1" Grid.Column="0" >
+							<Label.FormattedText>
+								<FormattedString>
+									<FormattedString.Spans>
+										<Span Text="Last Value" FontAttributes="Bold"></Span>
+										<Span Text=" "></Span>
+										<Span Text="{Binding VitaminB12, StringFormat='{0:F2} mg'}"></Span>
+									</FormattedString.Spans>
+								</FormattedString>
+							</Label.FormattedText>
+						</Label>
+						<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminB12Command}" Text="Read"></Button>
+					</Grid>
+				</Frame>
+
+
+			</VerticalStackLayout>
+
+		</ScrollView>
+</ContentPage>
