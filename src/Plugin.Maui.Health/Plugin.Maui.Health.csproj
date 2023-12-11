@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net7.0-android;net7.0-ios;net7.0-maccatalyst;</TargetFrameworks>
+		<TargetFrameworks>net8.0-android;net8.0-ios;net8.0-maccatalyst;</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
 		<SingleProject>true</SingleProject>
@@ -60,8 +60,13 @@
 	<ItemGroup>
 		<None Include="..\..\nuget.png" PackagePath="icon.png" Pack="true" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Extensions\" />
+	<ItemGroup Condition="'$(TargetFramework)' == 'net7.0-android'">
+	  <PackageReference Include="Xamarin.GooglePlayServices.Base">
+	    <Version>118.2.0.2</Version>
+	  </PackageReference>
+	  <PackageReference Include="Xamarin.GooglePlayServices.Fitness">
+	    <Version>121.1.0.4</Version>
+	  </PackageReference>
 	</ItemGroup>
 
 </Project>
