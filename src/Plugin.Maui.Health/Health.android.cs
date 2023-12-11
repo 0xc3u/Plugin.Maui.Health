@@ -2,7 +2,7 @@
 using Microsoft.Maui.ApplicationModel;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
-using Plugin.Maui.Health.Extensions;
+//using Plugin.Maui.Health.Extensions;
 using Plugin.Maui.Health.Models;
 
 namespace Plugin.Maui.Health;
