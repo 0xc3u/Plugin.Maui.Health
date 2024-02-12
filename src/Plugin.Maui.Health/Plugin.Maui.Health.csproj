@@ -51,6 +51,9 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+		<PackageReference Include="Google.Apis" Version="1.66.0" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.66.0" />
+		<PackageReference Include="Google.Apis.Fitness.v1" Version="1.66.0.3232" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="all" IsImplicitlyDefined="true" />
 		<PackageReference Include="System.Management" Version="7.0.0" Condition="$(TargetFramework.Contains('-windows')) == true" />
 		<PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.3" />
