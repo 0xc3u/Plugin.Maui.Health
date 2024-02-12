@@ -110,13 +110,14 @@ Once you have registered the `Health` plugin you can interact with it in the fol
 
 #### Models
 
-- `Sample` _Represents a health-related sample, containing information such as time range, value, source, and unit._
+- `Sample` _Represents a health-related sample, containing information such as time range, value, source, unit and description._
 
 #### Methods
 
 - `CheckPermissionAsync` _Checks and requests the specified permissions for a given health parameter._
 - `ReadCountAsync` _Reads the cumulative count of a specified "HealthParameter" within a given date range._
 - `ReadLatestAsync` _Reads the latest health data value for a specified  "HealthParameter"  within a given date range._
+- `ReadLatestAvailableAsync` _Reads the latest health data available value for a specified  "HealthParameter"  within a given date range and returns a `Sample` object._
 - `ReadAverageAsync` _Reads the average value of a specified "HealthParameter" within a given date range._
 - `ReadMinAsync` _Reads the min value of a specified "HealthParameter" within a given date range._
 - `ReadMaxAsync` _Reads the max value of a specified "HealthParameter" within a given date range._

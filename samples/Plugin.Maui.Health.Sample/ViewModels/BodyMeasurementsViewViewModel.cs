@@ -127,20 +127,30 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 		}
 	}
 
-	async Task ReadBodyMeasurement(HealthParameter vitamin, string unit, Action<double> callback)
+	async Task ReadBodyMeasurement(HealthParameter healthParameter, string unit, Action<double> callback)
 	{
 		try
 		{
 			IsBusy = true;
-			var hasPermission = await Health.CheckPermissionAsync(vitamin, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await Health.CheckPermissionAsync(healthParameter, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				var value = await Health.ReadLatestAsync(vitamin, DateTime.Now.AddDays(-1), DateTime.Now, unit);
-				callback(value ?? 0);
+				var value = await Health.ReadLatestAvailableAsync(healthParameter, unit);
+
+				if (value != null)
+				{
+					callback(value.Value ?? 0);
+				}
+				else
+				{
+					callback(0);
+				}
+
+				
 			}
 			else
 			{
-				await App.Current.MainPage.DisplayAlert("Permission", $"No '{vitamin}' Permission granted", "Ok");
+				await App.Current.MainPage.DisplayAlert("Permission", $"No '{healthParameter}' Permission granted", "Ok");
 			}
 		}
 		catch (HealthException hex)

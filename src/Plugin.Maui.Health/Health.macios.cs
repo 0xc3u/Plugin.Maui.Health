@@ -537,7 +537,8 @@ partial class HealthDataProviderImplementation : IHealth
 							var sample = new Sample((DateTime)hkSample.StartDate, (DateTime)hkSample.EndDate,
 									hkSample.Quantity.GetDoubleValue(hkUnit),
 									source,
-									unit);
+									unit,
+									description: hkSample.Quantity.Description);
 							healthValues.Add(sample);
 						}
 						tcs.SetResult(healthValues);
@@ -649,5 +650,72 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 
 		return hkUnit;
+	}
+
+	public async Task<Sample?> ReadLatestAvailableAsync(HealthParameter healthParameter, string unit)
+	{
+
+		await semaphore.WaitAsync();
+		var tcs = new TaskCompletionSource<Sample?>();
+
+		try
+		{
+			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			{
+				throw new HealthException($"{healthParameter} not available");
+			}
+
+			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
+			NSPredicate predicate = HKQuery.GetPredicateForSamples(default, default, HKQueryOptions.None);
+
+			HKSampleQuery query = new(quantityType, predicate, 1, new NSSortDescriptor[] { new NSSortDescriptor(HKSample.SortIdentifierEndDate, false) },
+				(HKSampleQuery _, HKSample[] results, NSError error) =>
+				{
+					if (error == null && results?.Length > 0)
+					{
+						if (results[0] is HKQuantitySample sample)
+						{
+							HKUnit hkUnit = GetHKUnit(unit);
+
+							Sample returnSample = new (from: (DateTime)sample.StartDate, 
+								until:(DateTime)sample.EndDate,
+								value: sample.Quantity.GetDoubleValue(hkUnit),
+								source: sample.Source.Name,
+								unit: unit,
+								description: sample.Quantity.Description);
+
+							tcs.SetResult(returnSample);
+						}
+						else
+						{
+							tcs.SetResult(default);
+						}
+					}
+					else
+					{
+						if (error != null)
+						{
+							tcs.SetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
+						}
+						else
+						{
+							tcs.SetResult(default);
+						}
+					}
+				});
+
+			healthStore.ExecuteQuery(query);
+		}
+		catch (Exception ex)
+		{
+			tcs.SetException(new HealthException(ex.Message, ex));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task;
+
 	}
 }

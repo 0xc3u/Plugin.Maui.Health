@@ -36,6 +36,11 @@ partial class HealthDataProviderImplementation : IHealth
 		throw new NotImplementedException();
 	}
 
+	public Task<Sample?> ReadLatestAvailableAsync(HealthParameter healthParameter, string unit)
+	{
+		throw new NotImplementedException();
+	}
+
 	public Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
 		throw new NotImplementedException();

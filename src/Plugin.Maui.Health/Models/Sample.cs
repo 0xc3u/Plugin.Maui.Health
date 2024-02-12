@@ -28,6 +28,8 @@ public sealed record Sample
 	/// </summary>
 	/// <value>The source of the sample.</value>
 	public string Source { get; }
+	
+	public string Description { get; }
 
 	/// <summary>
 	/// Gets the unit of the sample's value.
@@ -43,12 +45,13 @@ public sealed record Sample
 	/// <param name="value">The value of the sample.</param>
 	/// <param name="source">The source that generated the sample.</param>
 	/// <param name="unit">The unit of the sample's value.</param>
-	public Sample(DateTime? from, DateTime? until, double? value, string source, string unit)
+	public Sample(DateTime? from, DateTime? until, double? value, string source, string unit, string description = null)
 	{
 		From = from;
 		Until = until;
 		Value = value;
 		Source = source;
 		Unit = unit;
+		Description = string.IsNullOrEmpty(description) ? string.Concat(value.ToString(), " ", unit) : description;
 	}
 }
