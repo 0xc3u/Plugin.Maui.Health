@@ -1,4 +1,9 @@
 ﻿using Android.Content.PM;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Fitness.v1;
+using Google.Apis.Fitness.v1.Data;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
 using Microsoft.Maui.ApplicationModel;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
@@ -11,14 +16,72 @@ partial class HealthDataProviderImplementation : IHealth
 {
 	public bool IsSupported => throw new NotImplementedException();
 
+	static readonly string[] scopes = { FitnessService.Scope.FitnessActivityRead, FitnessService.Scope.FitnessBodyRead };
+	const string applicationName = "Your Application Name";
+	const string credentialFilePath = "credentials.json";
+
 	public Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
 	{
-		throw new NotImplementedException();
+		UserCredential credential;
+
+		using (var stream = new FileStream(credentialFilePath, FileMode.Open, FileAccess.Read))
+		{
+			// The file token.json stores the user's access and refresh tokens and is created automatically when the authorization flow completes for the first time.
+			var credPath = "token.json";
+			credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+				GoogleClientSecrets.Load(stream).Secrets,
+				scopes,
+				"user",
+				CancellationToken.None,
+				new FileDataStore(credPath, true));
+			Console.WriteLine("Credential file saved to: " + credPath);
+		}
+
+		var service = new FitnessService(new BaseClientService.Initializer()
+		{
+			HttpClientInitializer = credential,
+			ApplicationName = applicationName,
+		});
+
+		// Define parameters of the request.
+		string dataSourceId = "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps";
+		var today = DateTime.Today;
+		var now = DateTime.Now;
+		var startTime = new DateTimeOffset(today).ToUnixTimeSeconds() * 1000000000;
+		var endTime = new DateTimeOffset(now).ToUnixTimeSeconds() * 1000000000;
+		var dataSetId = $"{startTime}-{endTime}";
+
+		// Fetch dataset.
+		var request = service.Users.DataSources.Datasets.Get("me", dataSourceId, dataSetId);
+		var dataset = await request.ExecuteAsync();
+
+		ProcessDataset(dataset);
+
+		return new List<Sample>();
+	}
+
+	static void ProcessDataset(Dataset dataset)
+	{
+		var starts = new List<long>();
+		var ends = new List<long>();
+		var values = new List<int>();
+
+		foreach (var point in dataset.Point)
+		{
+			long startTimeNs = point.StartTimeNanos.Value;
+			long endTimeNs = point.EndTimeNanos.Value;
+
+			starts.Add(startTimeNs);
+			ends.Add(endTimeNs);
+			values.Add(point.Value[0].IntVal.Value);
+		}
+
+		// Additional processing and output as needed.
 	}
 
 	public Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
