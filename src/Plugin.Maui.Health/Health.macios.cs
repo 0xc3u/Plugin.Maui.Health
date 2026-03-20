@@ -1,4 +1,5 @@
-﻿using HealthKit;
+﻿using CoreLocation;
+using HealthKit;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
 using Plugin.Maui.Health.Models;
@@ -163,7 +164,12 @@ partial class HealthDataProviderImplementation : IHealth
 	/// <param name="permissionType">The type of permission to check or request. Can be Read, Write, or both.</param>
 	/// <returns>Returns a <see cref="Task{TResult}"/> representing the asynchronous operation, with a <see cref="bool"/> result indicating the success of the operation.</returns>
 	/// <exception cref="HealthException">Throws when HealthKit is not available, the health parameter is not available, or permission is not granted.</exception>
-	public async Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType)
+	// NSDate ↔ DateTimeOffset helpers
+	static NSDate ToNSDate(DateTimeOffset dto) => (NSDate)dto.UtcDateTime;
+	static DateTimeOffset ToDateTimeOffset(NSDate date) => new DateTimeOffset((DateTime)date, TimeSpan.Zero);
+
+	public async Task<bool> CheckPermissionAsync(HealthParameter healthParameter, PermissionType permissionType,
+		CancellationToken cancellationToken = default)
 	{
 		if (!IsSupported)
 		{
@@ -175,7 +181,7 @@ partial class HealthDataProviderImplementation : IHealth
 			throw new HealthException($"{healthParameter} not available");
 		}
 
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
 		NSSet? typesToRead = null;
 		NSSet? typesToWrite = null;
@@ -192,7 +198,7 @@ partial class HealthDataProviderImplementation : IHealth
 
 		try
 		{
-			var status = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead);
+			var status = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
 
 			// Check read permission if required
 			if (permissionType.HasFlag(PermissionType.Read) && !status.Item1)
@@ -235,9 +241,10 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var totalStepCount = await ReadCountAsync(HealthParameter.StepCount, DateTime.Now.AddDays(-7), DateTime.Now);
 	/// </code>
 	/// </example>
-	public async Task<double> ReadCountAsync(HealthParameter healthParameter, DateTime from, DateTime until)
+	public async Task<double> ReadCountAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default)
 	{
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
 		try
 		{
@@ -247,10 +254,9 @@ partial class HealthDataProviderImplementation : IHealth
 			}
 
 			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-			var tcs = new TaskCompletionSource<double>(); // Task completion source
+			var tcs = new TaskCompletionSource<double>();
 
-			var predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
-
+			var predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.StrictStartDate);
 
 			HKStatisticsQuery query = new(quantityType, predicate, HKStatisticsOptions.CumulativeSum,
 				(HKStatisticsQuery _, HKStatistics result, NSError error) =>
@@ -260,22 +266,22 @@ partial class HealthDataProviderImplementation : IHealth
 						HKQuantity sum = result.SumQuantity();
 						if (sum != null)
 						{
-							tcs.SetResult(sum.GetDoubleValue(HKUnit.Count));
+							tcs.TrySetResult(sum.GetDoubleValue(HKUnit.Count));
 						}
 						else
 						{
-							tcs.SetResult(0);
+							tcs.TrySetResult(0);
 						}
 					}
 					else
 					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "An error occurred"));
+						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? "An error occurred"));
 					}
 				});
 
 			healthStore.ExecuteQuery(query);
 
-			return await tcs.Task;
+			return await tcs.Task.ConfigureAwait(false);
 		}
 		catch (Exception ex)
 		{
@@ -306,19 +312,15 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var averageHeartRate = await ReadAverageAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	// These methods intentionally do not acquire the semaphore; they delegate to ReadAllAsync which does.
+	// Do NOT add semaphore.WaitAsync() here.
+	public async Task<double?> ReadAverageAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until, string unit,
+		CancellationToken cancellationToken = default)
 	{
 		try
 		{
-			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
-			if (valuesRead != null)
-			{
-				return valuesRead.Average(e => e.Value);
-			}
-			else
-			{
-				return null;
-			}
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit, cancellationToken).ConfigureAwait(false);
+			return valuesRead.Count > 0 ? valuesRead.Average(e => e.Value) : null;
 		}
 		catch (Exception ex)
 		{
@@ -344,19 +346,13 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var minHeartRate = await ReadMinAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double?> ReadMinAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadMinAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until, string unit,
+		CancellationToken cancellationToken = default)
 	{
 		try
 		{
-			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
-			if (valuesRead != null)
-			{
-				return valuesRead.Min(e => e.Value);
-			}
-			else
-			{
-				return null;
-			}
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit, cancellationToken).ConfigureAwait(false);
+			return valuesRead.Count > 0 ? valuesRead.Min(e => e.Value) : null;
 		}
 		catch (Exception ex)
 		{
@@ -382,19 +378,13 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var maxHeartRate = await ReadMaxAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "bpm");
 	/// </code>
 	/// </example>
-	public async Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadMaxAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until, string unit,
+		CancellationToken cancellationToken = default)
 	{
 		try
 		{
-			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit);
-			if (valuesRead != null)
-			{
-				return valuesRead.Max(e => e.Value);
-			}
-			else
-			{
-				return null;
-			}
+			var valuesRead = await ReadAllAsync(healthParameter, from, until, unit, cancellationToken).ConfigureAwait(false);
+			return valuesRead.Count > 0 ? valuesRead.Max(e => e.Value) : null;
 		}
 		catch (Exception ex)
 		{
@@ -420,9 +410,10 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var latestHeartRate = await ReadLatestAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-1), DateTime.Now, "count/min");
 	/// </code>
 	/// </example>
-	public async Task<double?> ReadLatestAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<double?> ReadLatestAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until, string unit,
+		CancellationToken cancellationToken = default)
 	{
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		var tcs = new TaskCompletionSource<double?>();
 
 		try
@@ -433,33 +424,33 @@ partial class HealthDataProviderImplementation : IHealth
 			}
 
 			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-			NSPredicate predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
+			NSPredicate predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.StrictStartDate);
 
 			HKSampleQuery query = new(quantityType, predicate, 1, new NSSortDescriptor[] { new NSSortDescriptor(HKSample.SortIdentifierEndDate, false) },
 				(HKSampleQuery _, HKSample[] results, NSError error) =>
 				{
 					if (error == null && results?.Length > 0)
 					{
-						if(results[0] is HKQuantitySample sample)
+						if (results[0] is HKQuantitySample sample)
 						{
 							HKUnit hkUnit = GetHKUnit(unit);
 							double? returnValue = sample.Quantity.GetDoubleValue(hkUnit);
-							tcs.SetResult(returnValue);
+							tcs.TrySetResult(returnValue);
 						}
 						else
 						{
-							tcs.SetResult(0d);
+							tcs.TrySetResult(0d);
 						}
 					}
 					else
 					{
 						if (error != null)
 						{
-							tcs.SetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
+							tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
 						}
 						else
 						{
-							tcs.SetResult(0d);
+							tcs.TrySetResult(0d);
 						}
 					}
 				});
@@ -468,14 +459,14 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(new HealthException(ex.Message, ex));
 		}
 		finally
 		{
 			semaphore.Release();
 		}
 
-		return await tcs.Task;
+		return await tcs.Task.ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -496,9 +487,10 @@ partial class HealthDataProviderImplementation : IHealth
 	/// var heartRates = await ReadAllAsync(HealthParameter.HeartRate, DateTime.Now.AddDays(-7), DateTime.Now, "count/min");
 	/// </code>
 	/// </example>
-	public async Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTime from, DateTime until, string unit)
+	public async Task<List<Sample>> ReadAllAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until, string unit,
+		CancellationToken cancellationToken = default)
 	{
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		var tcs = new TaskCompletionSource<List<Sample>>();
 
 		try
@@ -509,7 +501,7 @@ partial class HealthDataProviderImplementation : IHealth
 			}
 
 			HKQuantityType quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
-			NSPredicate predicate = HKQuery.GetPredicateForSamples((NSDate)from, (NSDate)until, HKQueryOptions.StrictStartDate);
+			NSPredicate predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.StrictStartDate);
 
 			List<Sample> healthValues = new();
 
@@ -525,27 +517,21 @@ partial class HealthDataProviderImplementation : IHealth
 								continue;
 							}
 
-							var source = string.Empty;
-
-							if (hkSample.Source != null)
-							{
-								source = hkSample?.Source.Name;
-							}
-
+							var source = hkSample.Source?.Name ?? string.Empty;
 							HKUnit hkUnit = GetHKUnit(unit);
 
-							var sample = new Sample((DateTime)hkSample.StartDate, (DateTime)hkSample.EndDate,
+							var sample = new Sample(ToDateTimeOffset(hkSample.StartDate), ToDateTimeOffset(hkSample.EndDate),
 									hkSample.Quantity.GetDoubleValue(hkUnit),
 									source,
 									unit,
 									description: hkSample.Quantity.Description);
 							healthValues.Add(sample);
 						}
-						tcs.SetResult(healthValues);
+						tcs.TrySetResult(healthValues);
 					}
 					else
 					{
-						tcs.SetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
+						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
 					}
 				});
 
@@ -553,14 +539,14 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(new HealthException(ex.Message, ex));
 		}
 		finally
 		{
 			semaphore.Release();
 		}
 
-		return await tcs.Task;
+		return await tcs.Task.ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -582,9 +568,10 @@ partial class HealthDataProviderImplementation : IHealth
 	/// <exception cref="HealthException">
 	/// Thrown when the specified health parameter is not available, when saving fails, or any other health-related error occurs.
 	/// </exception>
-	public async Task<bool> WriteAsync(HealthParameter healthParameter, DateTime? date, double valueToStore, string unit)
+	public async Task<bool> WriteAsync(HealthParameter healthParameter, DateTimeOffset? date, double valueToStore, string unit,
+		CancellationToken cancellationToken = default)
 	{
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
 		try
 		{
@@ -595,15 +582,9 @@ partial class HealthDataProviderImplementation : IHealth
 				throw new HealthException($"{healthParameter} not available");
 			}
 
-			
+			var currentDate = date ?? DateTimeOffset.Now;
 
-			var currentDate = DateTime.Now;
-			if (date.HasValue)
-			{
-				currentDate = date.Value;
-			}
-
-			NSDate startDate = (NSDate)currentDate;
+			NSDate startDate = ToNSDate(currentDate);
 			NSDate endDate = startDate.AddSeconds(1);
 			HKUnit hkUnit = GetHKUnit(unit);
 
@@ -617,14 +598,14 @@ partial class HealthDataProviderImplementation : IHealth
 			{
 				if (success)
 				{
-					tcs.SetResult(true);
+					tcs.TrySetResult(true);
 				}
 				else
 				{
-					tcs.SetException(new HealthException(error.LocalizedDescription));
+					tcs.TrySetException(new HealthException(error.LocalizedDescription));
 				}
 			});
-			return await tcs.Task;
+			return await tcs.Task.ConfigureAwait(false);
 		}
 		catch (Exception ex)
 		{
@@ -652,10 +633,10 @@ partial class HealthDataProviderImplementation : IHealth
 		return hkUnit;
 	}
 
-	public async Task<Sample?> ReadLatestAvailableAsync(HealthParameter healthParameter, string unit)
+	public async Task<Sample?> ReadLatestAvailableAsync(HealthParameter healthParameter, string unit,
+		CancellationToken cancellationToken = default)
 	{
-
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		var tcs = new TaskCompletionSource<Sample?>();
 
 		try
@@ -677,29 +658,30 @@ partial class HealthDataProviderImplementation : IHealth
 						{
 							HKUnit hkUnit = GetHKUnit(unit);
 
-							Sample returnSample = new (from: (DateTime)sample.StartDate, 
-								until:(DateTime)sample.EndDate,
+							Sample returnSample = new(
+								from: ToDateTimeOffset(sample.StartDate),
+								until: ToDateTimeOffset(sample.EndDate),
 								value: sample.Quantity.GetDoubleValue(hkUnit),
 								source: sample.Source.Name,
 								unit: unit,
 								description: sample.Quantity.Description);
 
-							tcs.SetResult(returnSample);
+							tcs.TrySetResult(returnSample);
 						}
 						else
 						{
-							tcs.SetResult(default);
+							tcs.TrySetResult(default);
 						}
 					}
 					else
 					{
 						if (error != null)
 						{
-							tcs.SetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
+							tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? error?.Description));
 						}
 						else
 						{
-							tcs.SetResult(default);
+							tcs.TrySetResult(default);
 						}
 					}
 				});
@@ -708,14 +690,280 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(new HealthException(ex.Message, ex));
 		}
 		finally
 		{
 			semaphore.Release();
 		}
 
-		return await tcs.Task;
-
+		return await tcs.Task.ConfigureAwait(false);
 	}
+
+	// ── Workout methods ───────────────────────────────────────────────────────
+
+	public async Task<List<WorkoutSession>> ReadWorkoutsAsync(WorkoutType workoutType, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default)
+	{
+		// Acquire semaphore only for the raw HealthKit query; route queries are per-workout and
+		// independent, so they run outside the semaphore to avoid holding it across multiple round-trips.
+		HKWorkout[] hkWorkouts;
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			hkWorkouts = await QueryHKWorkoutsAsync(workoutType, from, until, ascending: true, limit: HKSampleQuery.NoLimit).ConfigureAwait(false);
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		var sessions = new List<WorkoutSession>();
+		foreach (var workout in hkWorkouts)
+		{
+			var route = await QueryWorkoutRouteAsync(workout).ConfigureAwait(false);
+			sessions.Add(MapHKWorkout(workout, route));
+		}
+		return sessions;
+	}
+
+	public async Task<WorkoutSession?> ReadLatestWorkoutAsync(WorkoutType workoutType, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default)
+	{
+		HKWorkout[] hkWorkouts;
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			hkWorkouts = await QueryHKWorkoutsAsync(workoutType, from, until, ascending: false, limit: 1).ConfigureAwait(false);
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		if (hkWorkouts.Length == 0)
+		{
+			return null;
+		}
+
+		var route = await QueryWorkoutRouteAsync(hkWorkouts[0]).ConfigureAwait(false);
+		return MapHKWorkout(hkWorkouts[0], route);
+	}
+
+	public async Task<bool> WriteWorkoutAsync(WorkoutSession session, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			if (!workoutTypeMapping.TryGetValue(session.WorkoutType, out var activityType))
+			{
+				activityType = HKWorkoutActivityType.Other;
+			}
+
+			var config = new HKWorkoutConfiguration { ActivityType = activityType };
+			var builder = new HKWorkoutBuilder(healthStore, config, device: null);
+
+			var (_, beginError) = await builder.BeginCollectionAsync(ToNSDate(session.From)).ConfigureAwait(false);
+			if (beginError is not null)
+			{
+				throw new HealthException(beginError.LocalizedDescription);
+			}
+
+			var (_, endError) = await builder.EndCollectionAsync(ToNSDate(session.Until)).ConfigureAwait(false);
+			if (endError is not null)
+			{
+				throw new HealthException(endError.LocalizedDescription);
+			}
+
+			var (finishSuccess, finishError) = await builder.FinishWorkoutAsync().ConfigureAwait(false);
+			if (finishError is not null)
+			{
+				throw new HealthException(finishError.LocalizedDescription);
+			}
+
+			if (session.Route.Count > 0 && finishSuccess)
+			{
+				// FinishWorkoutAsync() does not return the HKWorkout object (binding limitation).
+				// Query for the workout we just saved using the known time window.
+				var savedWorkouts = await QueryHKWorkoutsAsync(
+					session.WorkoutType, session.From, session.Until,
+					ascending: false, limit: 1).ConfigureAwait(false);
+
+				if (savedWorkouts.Length > 0)
+				{
+					var savedWorkout = savedWorkouts[0];
+					var routeBuilder = new HKWorkoutRouteBuilder(healthStore, device: null);
+
+					var clLocations = session.Route
+						.Select(p => new CLLocation(
+							new CLLocationCoordinate2D(p.Latitude, p.Longitude),
+							altitude: p.AltitudeInMeters ?? 0,
+							hAccuracy: p.HorizontalAccuracyInMeters ?? -1,
+							vAccuracy: p.VerticalAccuracyInMeters ?? -1,
+							timestamp: ToNSDate(p.Time)))
+						.ToArray();
+
+					var (insertSuccess, _) = await routeBuilder.InsertRouteDataAsync(clLocations).ConfigureAwait(false);
+					if (insertSuccess)
+					{
+						await routeBuilder.FinishRouteAsync(savedWorkout, metadata: null).ConfigureAwait(false);
+					}
+				}
+			}
+
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	// ── Private workout helpers ───────────────────────────────────────────────
+
+	Task<HKWorkout[]> QueryHKWorkoutsAsync(WorkoutType workoutType, DateTimeOffset from, DateTimeOffset until, bool ascending, nuint limit)
+	{
+		var tcs = new TaskCompletionSource<HKWorkout[]>();
+
+		NSPredicate predicate;
+		if (workoutType == WorkoutType.Other)
+		{
+			predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.StrictStartDate);
+		}
+		else
+		{
+			var hkType = workoutTypeMapping.TryGetValue(workoutType, out var t) ? t : HKWorkoutActivityType.Other;
+			var typePred = HKQuery.GetPredicateForWorkouts(hkType);
+			var timePred = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.StrictStartDate);
+			predicate = NSCompoundPredicate.CreateAndPredicate(new[] { typePred, timePred });
+		}
+
+		var sort = new NSSortDescriptor(HKSample.SortIdentifierEndDate, ascending);
+		var query = new HKSampleQuery(HKObjectType.WorkoutType, predicate, limit, new[] { sort },
+			(_, results, error) =>
+			{
+				if (error is not null)
+				{
+					tcs.TrySetException(new HealthException(error.LocalizedDescription));
+				}
+				else
+				{
+					tcs.TrySetResult(results?.Cast<HKWorkout>().ToArray() ?? Array.Empty<HKWorkout>());
+				}
+			});
+
+		healthStore.ExecuteQuery(query);
+		return tcs.Task;
+	}
+
+	async Task<IReadOnlyList<RoutePoint>> QueryWorkoutRouteAsync(HKWorkout workout)
+	{
+		var routeTcs = new TaskCompletionSource<HKWorkoutRoute?>();
+		var routePredicate = HKQuery.GetPredicateForObjectsFromWorkout(workout);
+		var routeQuery = new HKSampleQuery(HKSeriesType.WorkoutRouteType, routePredicate, 1, null,
+			(_, results, error) =>
+			{
+				if (error is not null)
+				{
+					routeTcs.TrySetException(new HealthException(error.LocalizedDescription));
+				}
+				else
+				{
+					routeTcs.TrySetResult(results?.Length > 0 ? results[0] as HKWorkoutRoute : null);
+				}
+			});
+		healthStore.ExecuteQuery(routeQuery);
+
+		var route = await routeTcs.Task.ConfigureAwait(false);
+		if (route is null)
+		{
+			return Array.Empty<RoutePoint>();
+		}
+
+		var locations = new List<CLLocation>();
+		var locationsTcs = new TaskCompletionSource<bool>();
+
+		var locationQuery = new HKWorkoutRouteQuery(route, (_, newLocations, done, error) =>
+		{
+			if (error is not null)
+			{
+				locationsTcs.TrySetException(new HealthException(error.LocalizedDescription));
+				return;
+			}
+
+			if (newLocations is not null)
+			{
+				locations.AddRange(newLocations);
+			}
+
+			if (done)
+			{
+				locationsTcs.TrySetResult(true);
+			}
+		});
+		healthStore.ExecuteQuery(locationQuery);
+
+		await locationsTcs.Task.ConfigureAwait(false);
+
+		return locations.Select(loc => new RoutePoint
+		{
+			Time = ToDateTimeOffset(loc.Timestamp),
+			Latitude = loc.Coordinate.Latitude,
+			Longitude = loc.Coordinate.Longitude,
+			AltitudeInMeters = loc.Altitude,
+			HorizontalAccuracyInMeters = loc.HorizontalAccuracy >= 0 ? loc.HorizontalAccuracy : null,
+			VerticalAccuracyInMeters = loc.VerticalAccuracy >= 0 ? loc.VerticalAccuracy : null,
+		}).ToList().AsReadOnly();
+	}
+
+	WorkoutType GetActualWorkoutType(HKWorkoutActivityType activityType)
+	{
+		foreach (var kv in workoutTypeMapping)
+		{
+			if (kv.Value == activityType)
+			{
+				return kv.Key;
+			}
+		}
+
+		return WorkoutType.Other;
+	}
+
+	WorkoutSession MapHKWorkout(HKWorkout workout, IReadOnlyList<RoutePoint> route) =>
+		new()
+		{
+			WorkoutType = GetActualWorkoutType(workout.WorkoutActivityType),
+			From = ToDateTimeOffset(workout.StartDate),
+			Until = ToDateTimeOffset(workout.EndDate),
+			DurationInSeconds = workout.Duration,
+			EnergyBurnedInCalories = workout.TotalEnergyBurned?.GetDoubleValue(HKUnit.Kilocalorie),
+			TotalDistanceInMeters = workout.TotalDistance?.GetDoubleValue(HKUnit.Meter),
+			Title = null,
+			Source = workout.SourceRevision?.Source?.Name,
+			Route = route,
+		};
 }

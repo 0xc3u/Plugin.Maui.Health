@@ -17,7 +17,7 @@ public static class Units
 		public static string Milligrams => "mg";
 		public static string Grams => "g";
 		public static string Kilograms => "kg";
-		public static string Pounds => "kg";
+		public static string Pounds => "lb";
 		public static string Ounces => "oz";
 	}
 
@@ -63,8 +63,8 @@ public static class Units
 
 	public static class Concentration
 	{
-		public static string MolesPerLiter => "mol<L";
-		public static string MillimolesPerLiter => "mmol<L";
+		public static string MolesPerLiter => "mol/L";
+		public static string MillimolesPerLiter => "mmol/L";
 		public static string MilligramsPerDeciliter => "mg/dL";
 		public static string InternationalUnits => "IU";
 		public static string MillilitersPerKilogramPerMinute => "ml/kg/min";

@@ -49,10 +49,10 @@ public partial class VitaminsViewViewModel : BaseViewModel
 		try
 		{
 			IsBusy = true;
-			var hasPermission = await Health.CheckPermissionAsync(HealthParameter.DietaryVitaminC, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.DietaryVitaminC, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				await Health.WriteAsync(HealthParameter.DietaryVitaminC, DateTime.Now, NewVitaminC, Units.Mass.Milligrams);
+				await Health.WriteAsync(HealthParameter.DietaryVitaminC, DateTimeOffset.Now, NewVitaminC, Units.Mass.Milligrams);
 			}
 			else
 			{
@@ -110,10 +110,10 @@ public partial class VitaminsViewViewModel : BaseViewModel
 		try
 		{
 			IsBusy = true;
-			var hasPermission = await Health.CheckPermissionAsync(vitamin, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(vitamin, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				var value = await Health.ReadLatestAsync(vitamin, DateTime.Now.AddDays(-1), DateTime.Now, unit);
+				var value = await Health.ReadLatestAsync(vitamin, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, unit);
 				callback(value ?? 0);
 			}
 			else

@@ -40,10 +40,10 @@ public partial class MainPageViewModel : BaseViewModel
 
 		try
 		{
-			var hasPermission = await health.CheckPermissionAsync(HealthParameter.StepCount, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.StepCount, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				StepsCount = await health.ReadCountAsync(Enums.HealthParameter.StepCount, DateTime.Now.AddDays(-1), DateTime.Now);
+				StepsCount = await health.ReadCountAsync(Enums.HealthParameter.StepCount, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now);
 			}
 			else
 			{
@@ -69,7 +69,7 @@ public partial class MainPageViewModel : BaseViewModel
 	//		var hasPermission = await health.CheckPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
 	//		if (hasPermission)
 	//		{
-	//			var bodyMassSamples = await health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+	//			var bodyMassSamples = await health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Constants.Units.Mass.Kilograms);
 	//			BodyMassSamples = new ObservableCollection<Models.Sample>(bodyMassSamples);
 	//		}
 	//		else
@@ -95,10 +95,10 @@ public partial class MainPageViewModel : BaseViewModel
 
 		try
 		{
-			var hasPermission = await health.CheckPermissionAsync(HealthParameter.VO2Max, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.VO2Max, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				var vo2max = await health.ReadLatestAsync(Enums.HealthParameter.VO2Max, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Concentration.MillilitersPerKilogramPerMinute);
+				var vo2max = await health.ReadLatestAsync(Enums.HealthParameter.VO2Max, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Constants.Units.Concentration.MillilitersPerKilogramPerMinute);
 				Vo2max = (vo2max ?? 0) * 1000;
 			}
 			else
@@ -128,11 +128,11 @@ public partial class MainPageViewModel : BaseViewModel
 
 		try
 		{
-			var hasPermission = await health.CheckPermissionAsync(HealthParameter.StepCount, PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.StepCount, PermissionType.Write);
 
 			if (hasPermission)
 			{
-				await health.WriteAsync(HealthParameter.StepCount, DateTime.Now, StepsCountWrite, "Count");
+				await health.WriteAsync(HealthParameter.StepCount, DateTimeOffset.Now, StepsCountWrite, "Count");
 			}
 		}
 		catch (HealthException hex)

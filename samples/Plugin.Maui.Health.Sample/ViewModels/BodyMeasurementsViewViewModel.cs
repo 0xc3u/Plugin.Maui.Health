@@ -56,16 +56,16 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 		try
 		{
 			IsBusy = true;
-			var hasPermission = await Health.CheckPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				await Health.WriteAsync(HealthParameter.BodyMass, DateTime.Now, NewBodyMass, Units.Mass.Kilograms);
+				await Health.WriteAsync(HealthParameter.BodyMass, DateTimeOffset.Now, NewBodyMass, Units.Mass.Kilograms);
 
-				var hasBmiPermission = await Health.CheckPermissionAsync(HealthParameter.BodyMassIndex, PermissionType.Read | PermissionType.Write);
+				var hasBmiPermission = await EnsurePermissionAsync(HealthParameter.BodyMassIndex, PermissionType.Read | PermissionType.Write);
 				if (hasBmiPermission)
 				{
 					var newBodyMassIndex = CalculateBodyMassIndex(NewBodyMass, Height);
-					await Health.WriteAsync(HealthParameter.BodyMassIndex, DateTime.Now, newBodyMassIndex, Units.Others.Count);
+					await Health.WriteAsync(HealthParameter.BodyMassIndex, DateTimeOffset.Now, newBodyMassIndex, Units.Others.Count);
 				}
 			}
 			else
@@ -88,10 +88,10 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	{
 		try
 		{
-			var hasPermission = await Health.CheckPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				var bodyMassSamples = await Health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Mass.Kilograms);
+				var bodyMassSamples = await Health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Constants.Units.Mass.Kilograms);
 				BodyMassSamples = new ObservableCollection<Health.Models.Sample>(bodyMassSamples);
 			}
 			else
@@ -110,10 +110,10 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	{
 		try
 		{
-			var hasPermission = await Health.CheckPermissionAsync(HealthParameter.BodyFatPercentage, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(HealthParameter.BodyFatPercentage, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
-				var bodyMassSamples = await Health.ReadAllAsync(Enums.HealthParameter.BodyFatPercentage, DateTime.Now.AddDays(-1), DateTime.Now, Constants.Units.Others.Percentage);
+				var bodyMassSamples = await Health.ReadAllAsync(Enums.HealthParameter.BodyFatPercentage, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Constants.Units.Others.Percentage);
 				BodyMassSamples = new ObservableCollection<Health.Models.Sample>(bodyMassSamples);
 			}
 			else
@@ -132,7 +132,7 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 		try
 		{
 			IsBusy = true;
-			var hasPermission = await Health.CheckPermissionAsync(healthParameter, PermissionType.Read | PermissionType.Write);
+			var hasPermission = await EnsurePermissionAsync(healthParameter, PermissionType.Read | PermissionType.Write);
 			if (hasPermission)
 			{
 				var value = await Health.ReadLatestAvailableAsync(healthParameter, unit);
@@ -145,8 +145,6 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 				{
 					callback(0);
 				}
-
-				
 			}
 			else
 			{

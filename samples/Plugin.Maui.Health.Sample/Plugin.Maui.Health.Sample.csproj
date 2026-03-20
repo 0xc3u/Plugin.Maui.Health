@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
 		<OutputType>Exe</OutputType>
 		<RootNamespace>Plugin.Maui.Health.Sample</RootNamespace>
 		<UseMaui>true</UseMaui>
@@ -22,10 +22,10 @@
 	</PropertyGroup>
 
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-ios'">
-		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
+		<SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
 		<!-- Backward compatibility floor -->
 		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
 		<!-- Google Play compliance -->
@@ -49,9 +49,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="12.2.0" />
-		<PackageReference Update="Microsoft.Maui.Controls" Version="9.0.120" />
+	  <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
+		<!-- Pin to satisfy Health Connect's transitive requirement (>= 2.10.0.2) which conflicts with MAUI's older floor -->
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" Condition="$(TargetFramework.Contains('-android'))" />
 	</ItemGroup>
 
 	<ItemGroup>

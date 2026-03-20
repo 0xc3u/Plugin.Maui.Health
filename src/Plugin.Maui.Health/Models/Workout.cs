@@ -2,6 +2,7 @@
 
 namespace Plugin.Maui.Health.Models;
 
+[Obsolete("Use WorkoutSession instead.", error: false)]
 public sealed record Workout
 {
 	public WorkoutType WorkoutType { get; }

@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">18.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">30.0</SupportedOSPlatformVersion>
 		
 		<!-- NuGet -->
@@ -29,14 +29,14 @@
 	</PropertyGroup>
 
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-ios'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
 		<!-- Backward compatibility floor -->
 		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
-		<!-- Google Play compliance -->
-		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
+		<!-- Health Connect requires API 36 -->
+		<AndroidTargetSdkVersion>36</AndroidTargetSdkVersion>
 		<!-- Compiler baseline for API availability checks -->
 		<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
@@ -62,25 +62,17 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<PackageReference Include="Google.Apis" Version="1.73.0" />
-		<PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
-		<PackageReference Include="Google.Apis.Fitness.v1" Version="1.70.0.3883" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="all" IsImplicitlyDefined="true" />
 		<PackageReference Include="System.Management" Version="7.0.0" Condition="$(TargetFramework.Contains('-windows')) == true" />
-		<PackageReference Include="Microsoft.Maui.Essentials" Version="9.0.120" />
+		<PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.50" />
 	</ItemGroup>
 
 	<!-- Package additions -->
 	<ItemGroup>
 		<None Include="..\..\nuget.png" PackagePath="icon.png" Pack="true" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
-	  <PackageReference Include="Xamarin.GooglePlayServices.Base">
-	    <Version>118.2.0.2</Version>
-	  </PackageReference>
-	  <PackageReference Include="Xamarin.GooglePlayServices.Fitness">
-	    <Version>121.1.0.4</Version>
-	  </PackageReference>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+		<PackageReference Include="Xamarin.AndroidX.Health.Connect.ConnectClient" Version="1.1.0.2" />
 	</ItemGroup>
 
 </Project>

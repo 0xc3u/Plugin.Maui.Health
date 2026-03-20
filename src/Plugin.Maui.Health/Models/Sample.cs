@@ -1,4 +1,4 @@
-﻿namespace Plugin.Maui.Health.Models;
+namespace Plugin.Maui.Health.Models;
 
 /// <summary>
 /// Represents a health-related sample, containing information such as time range, value, source, and unit.
@@ -8,34 +8,32 @@ public sealed record Sample
 	/// <summary>
 	/// Gets the starting date and time of the sample.
 	/// </summary>
-	/// <value>The start date and time.</value>
-	public DateTime? From { get; }
+	public DateTimeOffset? From { get; init; }
 
 	/// <summary>
 	/// Gets the ending date and time of the sample.
 	/// </summary>
-	/// <value>The end date and time.</value>
-	public DateTime? Until { get; }
+	public DateTimeOffset? Until { get; init; }
 
 	/// <summary>
 	/// Gets the value of the sample.
 	/// </summary>
-	/// <value>The sample value.</value>
-	public double? Value { get; }
+	public double? Value { get; init; }
 
 	/// <summary>
 	/// Gets the source that generated the sample.
 	/// </summary>
-	/// <value>The source of the sample.</value>
-	public string Source { get; }
-	
-	public string Description { get; }
+	public string Source { get; init; } = string.Empty;
+
+	/// <summary>
+	/// Gets a human-readable description. Defaults to "{value} {unit}" when not supplied.
+	/// </summary>
+	public string Description { get; init; } = string.Empty;
 
 	/// <summary>
 	/// Gets the unit of the sample's value.
 	/// </summary>
-	/// <value>The unit of the sample.</value>
-	public string Unit { get; }
+	public string Unit { get; init; } = string.Empty;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Sample"/> record.
@@ -45,13 +43,16 @@ public sealed record Sample
 	/// <param name="value">The value of the sample.</param>
 	/// <param name="source">The source that generated the sample.</param>
 	/// <param name="unit">The unit of the sample's value.</param>
-	public Sample(DateTime? from, DateTime? until, double? value, string source, string unit, string description = null)
+	/// <param name="description">Optional description; defaults to "{value} {unit}".</param>
+	public Sample(DateTimeOffset? from, DateTimeOffset? until, double? value, string source, string unit, string description = null)
 	{
 		From = from;
 		Until = until;
 		Value = value;
 		Source = source;
 		Unit = unit;
-		Description = string.IsNullOrEmpty(description) ? string.Concat(value.ToString(), " ", unit) : description;
+		Description = string.IsNullOrEmpty(description)
+			? value.HasValue ? $"{value.Value:G} {unit}" : unit
+			: description;
 	}
 }
