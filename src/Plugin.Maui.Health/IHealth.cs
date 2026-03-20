@@ -87,6 +87,19 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Checks (and requests, on iOS) authorization to read and/or write workout sessions and GPS routes.
+	/// Must be called before using <see cref="ReadWorkoutsAsync"/>, <see cref="ReadLatestWorkoutAsync"/>,
+	/// or <see cref="WriteWorkoutAsync"/>.
+	/// </summary>
+	/// <remarks>
+	/// On iOS, requests authorization for <c>HKObjectType.WorkoutType</c> and <c>HKSeriesType.WorkoutRouteType</c>
+	/// from HealthKit. On Android, checks whether the <c>READ_EXERCISE</c> / <c>WRITE_EXERCISE</c>
+	/// Health Connect permissions are already granted — it does NOT launch the consent UI.
+	/// </remarks>
+	/// <returns>True if the required workout permissions are granted.</returns>
+	Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Returns all workout sessions of the specified type recorded in the given date range.
 	/// Use <see cref="WorkoutType.Other"/> to return all workout types.
 	/// </summary>

@@ -138,6 +138,54 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// ── CheckWorkoutPermissionAsync ───────────────────────────────────────────
+
+	public async Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+	{
+		const string readPerm = "android.permission.health.READ_EXERCISE";
+		const string writePerm = "android.permission.health.WRITE_EXERCISE";
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var grantedRaw = await InvokeCoroutine(
+				c => client.PermissionController.GetGrantedPermissions(c)).ConfigureAwait(false);
+
+			var granted = new HashSet<string>();
+			if (grantedRaw is Java.Lang.Object rawObj)
+			{
+				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.AbstractCollection>(rawObj)?.Iterator();
+				if (iter != null)
+				{
+					while (iter.HasNext)
+						granted.Add(iter.Next()?.ToString() ?? "");
+				}
+			}
+
+			var required = new HashSet<string>();
+			if (permissionType.HasFlag(PermissionType.Read))
+				required.Add(readPerm);
+			if (permissionType.HasFlag(PermissionType.Write))
+				required.Add(writePerm);
+
+			return required.All(p => granted.Contains(p));
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	// ── ReadCountAsync ────────────────────────────────────────────────────────
 
 	public async Task<double> ReadCountAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,

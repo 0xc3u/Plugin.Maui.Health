@@ -224,6 +224,36 @@ partial class HealthDataProviderImplementation : IHealth
 		return true;
 	}
 
+	public async Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			// Include both HKObjectType.WorkoutType and HKSeriesType.WorkoutRouteType so the
+			// caller can read and write GPS routes without a separate authorization step.
+			var objects = new NSObject[] { HKObjectType.WorkoutType, HKSeriesType.WorkoutRouteType };
+			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? new NSSet(objects) : null;
+			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? new NSSet(objects) : null;
+
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	/// <summary>
 	/// Reads the cumulative count of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>
@@ -729,6 +759,7 @@ partial class HealthDataProviderImplementation : IHealth
 		var sessions = new List<WorkoutSession>();
 		foreach (var workout in hkWorkouts)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			var route = await QueryWorkoutRouteAsync(workout).ConfigureAwait(false);
 			sessions.Add(MapHKWorkout(workout, route));
 		}
@@ -768,6 +799,8 @@ partial class HealthDataProviderImplementation : IHealth
 
 	public async Task<bool> WriteWorkoutAsync(WorkoutSession session, CancellationToken cancellationToken = default)
 	{
+		// Phase 1: write the workout and retrieve it — hold semaphore only for this phase.
+		HKWorkout? savedWorkout = null;
 		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		try
 		{
@@ -801,33 +834,17 @@ partial class HealthDataProviderImplementation : IHealth
 			{
 				// FinishWorkoutAsync() does not return the HKWorkout object (binding limitation).
 				// Query for the workout we just saved using the known time window.
-				var savedWorkouts = await QueryHKWorkoutsAsync(
+				var saved = await QueryHKWorkoutsAsync(
 					session.WorkoutType, session.From, session.Until,
 					ascending: false, limit: 1).ConfigureAwait(false);
 
-				if (savedWorkouts.Length > 0)
+				if (saved.Length == 0)
 				{
-					var savedWorkout = savedWorkouts[0];
-					var routeBuilder = new HKWorkoutRouteBuilder(healthStore, device: null);
-
-					var clLocations = session.Route
-						.Select(p => new CLLocation(
-							new CLLocationCoordinate2D(p.Latitude, p.Longitude),
-							altitude: p.AltitudeInMeters ?? 0,
-							hAccuracy: p.HorizontalAccuracyInMeters ?? -1,
-							vAccuracy: p.VerticalAccuracyInMeters ?? -1,
-							timestamp: ToNSDate(p.Time)))
-						.ToArray();
-
-					var (insertSuccess, _) = await routeBuilder.InsertRouteDataAsync(clLocations).ConfigureAwait(false);
-					if (insertSuccess)
-					{
-						await routeBuilder.FinishRouteAsync(savedWorkout, metadata: null).ConfigureAwait(false);
-					}
+					throw new HealthException("Workout was saved but could not be retrieved to attach the GPS route.");
 				}
-			}
 
-			return true;
+				savedWorkout = saved[0];
+			}
 		}
 		catch (HealthException)
 		{
@@ -841,6 +858,41 @@ partial class HealthDataProviderImplementation : IHealth
 		{
 			semaphore.Release();
 		}
+
+		// Phase 2: attach GPS route outside the semaphore — route builder ops are self-contained.
+		if (savedWorkout is not null)
+		{
+			try
+			{
+				var routeBuilder = new HKWorkoutRouteBuilder(healthStore, device: null);
+				var clLocations = session.Route
+					.Select(p => new CLLocation(
+						new CLLocationCoordinate2D(p.Latitude, p.Longitude),
+						altitude: p.AltitudeInMeters ?? 0,
+						hAccuracy: p.HorizontalAccuracyInMeters ?? -1,
+						vAccuracy: p.VerticalAccuracyInMeters ?? -1,
+						timestamp: ToNSDate(p.Time)))
+					.ToArray();
+
+				var (insertSuccess, insertError) = await routeBuilder.InsertRouteDataAsync(clLocations).ConfigureAwait(false);
+				if (!insertSuccess)
+				{
+					throw new HealthException(insertError?.LocalizedDescription ?? "Failed to insert GPS route data.");
+				}
+
+				await routeBuilder.FinishRouteAsync(savedWorkout, metadata: null).ConfigureAwait(false);
+			}
+			catch (HealthException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new HealthException(ex.Message, ex);
+			}
+		}
+
+		return true;
 	}
 
 	// ── Private workout helpers ───────────────────────────────────────────────
@@ -882,62 +934,69 @@ partial class HealthDataProviderImplementation : IHealth
 
 	async Task<IReadOnlyList<RoutePoint>> QueryWorkoutRouteAsync(HKWorkout workout)
 	{
-		var routeTcs = new TaskCompletionSource<HKWorkoutRoute?>();
+		// A workout with pause/resume can have multiple HKWorkoutRoute segments — fetch all of them.
+		var routesTcs = new TaskCompletionSource<HKWorkoutRoute[]>();
 		var routePredicate = HKQuery.GetPredicateForObjectsFromWorkout(workout);
-		var routeQuery = new HKSampleQuery(HKSeriesType.WorkoutRouteType, routePredicate, 1, null,
+		var routeQuery = new HKSampleQuery(HKSeriesType.WorkoutRouteType, routePredicate, HKSampleQuery.NoLimit, null,
 			(_, results, error) =>
 			{
 				if (error is not null)
 				{
-					routeTcs.TrySetException(new HealthException(error.LocalizedDescription));
+					routesTcs.TrySetException(new HealthException(error.LocalizedDescription));
 				}
 				else
 				{
-					routeTcs.TrySetResult(results?.Length > 0 ? results[0] as HKWorkoutRoute : null);
+					routesTcs.TrySetResult(results?.Cast<HKWorkoutRoute>().ToArray() ?? Array.Empty<HKWorkoutRoute>());
 				}
 			});
 		healthStore.ExecuteQuery(routeQuery);
 
-		var route = await routeTcs.Task.ConfigureAwait(false);
-		if (route is null)
+		var routes = await routesTcs.Task.ConfigureAwait(false);
+		if (routes.Length == 0)
 		{
 			return Array.Empty<RoutePoint>();
 		}
 
-		var locations = new List<CLLocation>();
-		var locationsTcs = new TaskCompletionSource<bool>();
-
-		var locationQuery = new HKWorkoutRouteQuery(route, (_, newLocations, done, error) =>
+		var allPoints = new List<RoutePoint>();
+		foreach (var route in routes)
 		{
-			if (error is not null)
+			var locations = new List<CLLocation>();
+			var locationsTcs = new TaskCompletionSource<bool>();
+
+			var locationQuery = new HKWorkoutRouteQuery(route, (_, newLocations, done, error) =>
 			{
-				locationsTcs.TrySetException(new HealthException(error.LocalizedDescription));
-				return;
-			}
+				if (error is not null)
+				{
+					locationsTcs.TrySetException(new HealthException(error.LocalizedDescription));
+					return;
+				}
 
-			if (newLocations is not null)
+				if (newLocations is not null)
+				{
+					locations.AddRange(newLocations);
+				}
+
+				if (done)
+				{
+					locationsTcs.TrySetResult(true);
+				}
+			});
+			healthStore.ExecuteQuery(locationQuery);
+
+			await locationsTcs.Task.ConfigureAwait(false);
+
+			allPoints.AddRange(locations.Select(loc => new RoutePoint
 			{
-				locations.AddRange(newLocations);
-			}
+				Time = ToDateTimeOffset(loc.Timestamp),
+				Latitude = loc.Coordinate.Latitude,
+				Longitude = loc.Coordinate.Longitude,
+				AltitudeInMeters = loc.Altitude,
+				HorizontalAccuracyInMeters = loc.HorizontalAccuracy >= 0 ? loc.HorizontalAccuracy : null,
+				VerticalAccuracyInMeters = loc.VerticalAccuracy >= 0 ? loc.VerticalAccuracy : null,
+			}));
+		}
 
-			if (done)
-			{
-				locationsTcs.TrySetResult(true);
-			}
-		});
-		healthStore.ExecuteQuery(locationQuery);
-
-		await locationsTcs.Task.ConfigureAwait(false);
-
-		return locations.Select(loc => new RoutePoint
-		{
-			Time = ToDateTimeOffset(loc.Timestamp),
-			Latitude = loc.Coordinate.Latitude,
-			Longitude = loc.Coordinate.Longitude,
-			AltitudeInMeters = loc.Altitude,
-			HorizontalAccuracyInMeters = loc.HorizontalAccuracy >= 0 ? loc.HorizontalAccuracy : null,
-			VerticalAccuracyInMeters = loc.VerticalAccuracy >= 0 ? loc.VerticalAccuracy : null,
-		}).ToList().AsReadOnly();
+		return allPoints.AsReadOnly();
 	}
 
 	WorkoutType GetActualWorkoutType(HKWorkoutActivityType activityType)
