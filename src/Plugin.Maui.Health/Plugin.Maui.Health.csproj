@@ -15,17 +15,18 @@
 		<PackageProjectUrl>https://github.com/0xc3u/Plugin.Maui.Health</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/0xc3u/Plugin.Maui.Health</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<PackageTags>dotnet-maui;maui;plugin;healthkit;</PackageTags>
 		<IncludeSymbols>True</IncludeSymbols>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<Title>.NET MAUI Health Data Provider Plugin</Title>
-		<Description>Plugin.Maui.Feature provides the ability to access device health information in your .NET MAUI application.</Description>
+		<Title>Plugin.Maui.Health — Health Data Plugin for .NET MAUI</Title>
+		<Description>Plugin.Maui.Health provides cross-platform access to device health and fitness data in your .NET MAUI application. Read and write steps, heart rate, body measurements, nutrition, workouts with GPS routes, and more — via Apple HealthKit on iOS and Android Health Connect on Android.</Description>
+		<PackageTags>dotnet-maui;maui;plugin;health;healthkit;health-connect;android-health-connect;apple-healthkit;fitness;steps;heart-rate;workout;gps;body-mass;nutrition;vitamins;pedometer;ios;android;cross-platform</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<DebugType>portable</DebugType>
 		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 
@@ -70,6 +71,7 @@
 	<!-- Package additions -->
 	<ItemGroup>
 		<None Include="..\..\nuget.png" PackagePath="icon.png" Pack="true" />
+		<None Include="..\..\README.md" PackagePath="README.md" Pack="true" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
 		<PackageReference Include="Xamarin.AndroidX.Health.Connect.ConnectClient" Version="1.1.0.2" />
