@@ -214,7 +214,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -246,7 +246,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -291,7 +291,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -365,7 +365,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -404,7 +404,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 	}
 
@@ -436,7 +436,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 	}
 
@@ -468,7 +468,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 	}
 
@@ -539,7 +539,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.TrySetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
 		}
 		finally
 		{
@@ -619,7 +619,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.TrySetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
 		}
 		finally
 		{
@@ -689,7 +689,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -770,7 +770,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			tcs.TrySetException(new HealthException(ex.Message, ex));
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
 		}
 		finally
 		{
@@ -799,7 +799,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -831,7 +831,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -902,7 +902,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "iOS");
 		}
 		finally
 		{
@@ -938,7 +938,7 @@ partial class HealthDataProviderImplementation : IHealth
 			}
 			catch (Exception ex)
 			{
-				throw new HealthException(ex.Message, ex);
+				throw HealthException.Wrap(ex, "iOS");
 			}
 		}
 

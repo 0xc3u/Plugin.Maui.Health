@@ -22,10 +22,37 @@ partial class HealthDataProviderImplementation : IHealth
 {
 	readonly SemaphoreSlim semaphore = new(1, 1);
 
-	IHealthConnectClient GetClient() => HealthConnectClient.GetOrCreate(Platform.AppContext);
+	IHealthConnectClient GetClient()
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException(
+				"Plugin.Maui.Health: Health Connect is not available on this device. It is built in on " +
+				"Android 14+ (API 34+); on Android 11–13 the user must install it from the Play Store. " +
+				"Check IsSupported before calling any read/write method.")
+			{
+				Platform = "Android",
+			};
+		}
 
-	public bool IsSupported =>
-		HealthConnectClient.GetSdkStatus(Platform.AppContext) == HealthConnectClient.SdkAvailable;
+		return HealthConnectClient.GetOrCreate(Platform.AppContext);
+	}
+
+	public bool IsSupported
+	{
+		get
+		{
+			try
+			{
+				return HealthConnectClient.GetSdkStatus(Platform.AppContext) == HealthConnectClient.SdkAvailable;
+			}
+			catch
+			{
+				// IsSupported must never throw — callers rely on it to gate every other call.
+				return false;
+			}
+		}
+	}
 
 	// ── Permission helpers ────────────────────────────────────────────────────
 
@@ -130,7 +157,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -178,7 +205,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -282,7 +309,7 @@ partial class HealthDataProviderImplementation : IHealth
 			}
 			catch (Exception ex)
 			{
-				tcs.TrySetException(new HealthException(ex.Message, ex));
+				tcs.TrySetException(HealthException.Wrap(ex, "Android", operation: "RequestPermission"));
 			}
 		});
 
@@ -361,7 +388,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -388,7 +415,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -414,7 +441,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -440,7 +467,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 	}
 
@@ -458,7 +485,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 	}
 
@@ -476,7 +503,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 	}
 
@@ -498,7 +525,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -664,7 +691,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -713,7 +740,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -759,7 +786,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -810,7 +837,7 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 		catch (Exception ex)
 		{
-			throw new HealthException(ex.Message, ex);
+			throw HealthException.Wrap(ex, "Android");
 		}
 		finally
 		{
@@ -1488,16 +1515,33 @@ partial class HealthDataProviderImplementation : IHealth
 	static Task<Java.Lang.Object?> InvokeCoroutine(Func<IContinuation, Java.Lang.Object?> fn)
 	{
 		var cont = new KotlinContinuation();
+		Java.Lang.Object? immediate;
 		try
 		{
-			fn(cont);
+			immediate = fn(cont);
 		}
 		catch (Exception ex)
 		{
 			return Task.FromException<Java.Lang.Object?>(ex);
 		}
+
+		// A Kotlin suspend function returns the COROUTINE_SUSPENDED sentinel only when it actually
+		// suspends — in which case the result arrives later via the continuation. If it completes
+		// synchronously it returns the result directly and never calls the continuation, so awaiting
+		// cont.Task would hang forever (this is why ReadRecords could hang while Aggregate worked).
+		if (immediate is not null && !IsCoroutineSuspended(immediate))
+		{
+			return Task.FromResult<Java.Lang.Object?>(immediate);
+		}
+
 		return cont.Task;
 	}
+
+	// kotlin.coroutines.intrinsics.CoroutineSingletons.COROUTINE_SUSPENDED — the marker a suspend
+	// function returns when it suspends rather than completing inline.
+	static bool IsCoroutineSuspended(Java.Lang.Object value)
+		=> value.Class?.Name == "kotlin.coroutines.intrinsics.CoroutineSingletons"
+			&& string.Equals(value.ToString(), "COROUTINE_SUSPENDED", StringComparison.Ordinal);
 
 	// Get the Kotlin KClass for a managed Android type T.
 	static IKClass GetKClass<T>() where T : Java.Lang.Object
