@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Storage;
 using Plugin.Maui.Health.Constants;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
@@ -40,12 +41,77 @@ public partial class VitaminsViewViewModel : BaseViewModel
 	[ObservableProperty]
 	ObservableCollection<ChartEntry> vitaminLevels = new();
 
+	const string SeededVitaminsKey = "seeded.vitamins";
+
+	static readonly (HealthParameter Param, double Mg)[] DemoVitamins =
+	{
+		(HealthParameter.DietaryVitaminC, 82d),
+		(HealthParameter.DietaryVitaminD, 0.015d),
+		(HealthParameter.DietaryVitaminE, 12d),
+		(HealthParameter.DietaryVitaminB6, 1.6d),
+		(HealthParameter.DietaryVitaminB12, 0.0024d),
+		(HealthParameter.DietaryVitaminK, 0.11d),
+	};
+
 	public VitaminsViewViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
-		// Representative intake so the chart looks complete on first view; replaced by real reads.
+		// Representative intake so the chart looks complete before real data loads.
 		VitaminC = 82; VitaminD = 0.015; VitaminE = 12; VitaminB6 = 1.6; VitaminB12 = 0.0024; VitaminK = 0.11;
 		RefreshChart();
 	}
+
+	/// <summary>Writes showcase vitamin intake into the health store once, then loads the real values back.</summary>
+	public async Task InitializeAsync()
+	{
+		if (!Health.IsSupported)
+			return; // keep demo data
+
+		try
+		{
+			IsBusy = true;
+
+			// All dietary vitamins share the NUTRITION permission, so one request covers them.
+			var granted = await Health.RequestPermissionAsync(HealthParameter.DietaryVitaminC, PermissionType.Read | PermissionType.Write);
+			if (!granted)
+				return; // keep demo data
+
+			await SeedVitaminsOnceAsync();
+			await LoadVitaminsAsync();
+		}
+		catch (HealthException)
+		{
+			// Leave demo data in place.
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
+	async Task SeedVitaminsOnceAsync()
+	{
+		if (Preferences.Get(SeededVitaminsKey, false))
+			return;
+
+		foreach (var (param, mg) in DemoVitamins)
+			await Health.WriteAsync(param, DateTimeOffset.Now, mg, Units.Mass.Milligrams);
+
+		Preferences.Set(SeededVitaminsKey, true);
+	}
+
+	async Task LoadVitaminsAsync()
+	{
+		VitaminC = await ReadLatestMg(HealthParameter.DietaryVitaminC) ?? VitaminC;
+		VitaminD = await ReadLatestMg(HealthParameter.DietaryVitaminD) ?? VitaminD;
+		VitaminE = await ReadLatestMg(HealthParameter.DietaryVitaminE) ?? VitaminE;
+		VitaminB6 = await ReadLatestMg(HealthParameter.DietaryVitaminB6) ?? VitaminB6;
+		VitaminB12 = await ReadLatestMg(HealthParameter.DietaryVitaminB12) ?? VitaminB12;
+		VitaminK = await ReadLatestMg(HealthParameter.DietaryVitaminK) ?? VitaminK;
+		RefreshChart();
+	}
+
+	Task<double?> ReadLatestMg(HealthParameter parameter)
+		=> Health.ReadLatestAsync(parameter, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Units.Mass.Milligrams);
 
 	void RefreshChart()
 	{

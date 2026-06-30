@@ -12,4 +12,11 @@ public partial class BodyMeasurementsView : ContentPage
 		InitializeComponent();
 		BindingContext = bodyMeasurementsViewViewModel;
 	}
+
+	protected override void OnAppearing()
+	{
+		base.OnAppearing();
+		if (BindingContext is BodyMeasurementsViewViewModel vm)
+			_ = vm.InitializeAsync();
+	}
 }

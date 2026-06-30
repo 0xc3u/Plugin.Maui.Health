@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
+using Microsoft.Maui.Storage;
 using Plugin.Maui.Health.Sample.Services;
 using Plugin.Maui.Health.Sample.Controls;
 using Plugin.Maui.Health.Enums;
@@ -38,22 +39,88 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	[ObservableProperty]
 	string bmiValueText = "--";
 
+	const string SeededWeightKey = "seeded.weight";
+	static readonly double[] DemoWeights = { 74.1, 73.6, 73.8, 73.1, 72.9, 72.4, 72.6, 72.5 };
+
 	public BodyMeasurementsViewViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
-		SeedShowcaseData();
+		ShowDemoData();
 	}
 
-	// Representative data so the charts look complete on first view; replaced by real reads.
-	void SeedShowcaseData()
+	/// <summary>Writes showcase body data into the health store once, then loads the real values back.</summary>
+	public async Task InitializeAsync()
+	{
+		if (!Health.IsSupported)
+			return; // keep demo data
+
+		try
+		{
+			IsBusy = true;
+
+			var granted = await Health.RequestPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
+			await Health.RequestPermissionAsync(HealthParameter.Height, PermissionType.Read | PermissionType.Write);
+			if (!granted)
+				return; // keep demo data
+
+			await SeedBodyOnceAsync();
+			await LoadBodyAsync();
+		}
+		catch (HealthException)
+		{
+			// Leave demo data in place.
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
+	async Task SeedBodyOnceAsync()
+	{
+		if (Preferences.Get(SeededWeightKey, false))
+			return;
+
+		for (int i = 0; i < DemoWeights.Length; i++)
+		{
+			var day = DateTimeOffset.Now.AddDays(i - (DemoWeights.Length - 1));
+			await Health.WriteAsync(HealthParameter.BodyMass, day, DemoWeights[i], Units.Mass.Kilograms);
+		}
+
+		await Health.WriteAsync(HealthParameter.Height, DateTimeOffset.Now, 178, Units.Length.Centimeters);
+		Preferences.Set(SeededWeightKey, true);
+	}
+
+	async Task LoadBodyAsync()
+	{
+		var latestWeight = await Health.ReadLatestAvailableAsync(HealthParameter.BodyMass, Units.Mass.Kilograms);
+		if (latestWeight?.Value is double w && w > 0)
+			BodyMass = w;
+
+		var latestHeight = await Health.ReadLatestAvailableAsync(HealthParameter.Height, Units.Length.Centimeters);
+		if (latestHeight?.Value is double h && h > 0)
+			Height = h;
+
+		SetBmi(ComputeBmi(BodyMass, Height));
+
+		var samples = await Health.ReadAllAsync(HealthParameter.BodyMass, DateTimeOffset.Now.AddDays(-30), DateTimeOffset.Now, Units.Mass.Kilograms);
+		if (samples.Count > 0)
+		{
+			BodyMassSamples = new ObservableCollection<Health.Models.Sample>(samples);
+			WeightTrend = new ObservableCollection<ChartEntry>(
+				samples.Select(s => new ChartEntry(s.Value ?? 0, s.From?.ToString("MM/dd"))));
+		}
+	}
+
+	// Representative data so the charts look complete before real data loads.
+	void ShowDemoData()
 	{
 		Height = 178;
 		BodyMass = 72.5;
-		SetBmi(22.9);
+		SetBmi(ComputeBmi(BodyMass, Height));
 
-		double[] trend = { 74.1, 73.6, 73.8, 73.1, 72.9, 72.4, 72.6, 72.5 };
 		var today = DateTimeOffset.Now;
 		WeightTrend = new ObservableCollection<ChartEntry>(
-			trend.Select((v, i) => new ChartEntry(v, today.AddDays(i - trend.Length + 1).ToString("MM/dd"))));
+			DemoWeights.Select((v, i) => new ChartEntry(v, today.AddDays(i - DemoWeights.Length + 1).ToString("MM/dd"))));
 	}
 
 	void SetBmi(double value)
@@ -63,6 +130,16 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 		BmiProgress = Math.Clamp(value / 40d, 0d, 1d);
 	}
 
+	// Health Connect has no BMI record type, so BMI is derived from weight + height.
+	static double ComputeBmi(double weightKg, double heightCm)
+	{
+		if (weightKg <= 0 || heightCm <= 0)
+			return 0;
+
+		var meters = heightCm / 100d;
+		return weightKg / (meters * meters);
+	}
+
 	[RelayCommand]
 	async Task ReadHeight()
 	{
@@ -70,9 +147,10 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	}
 
 	[RelayCommand]
-	async Task ReadBodyMassIndex()
+	void ReadBodyMassIndex()
 	{
-		await ReadBodyMeasurement(HealthParameter.BodyMassIndex, Units.Others.Count, SetBmi);
+		// Derived from the latest weight + height (Health Connect has no BMI record type).
+		SetBmi(ComputeBmi(BodyMass, Height));
 	}
 
 	[RelayCommand]

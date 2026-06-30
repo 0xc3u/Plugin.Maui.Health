@@ -9,4 +9,11 @@ public partial class VitaminsView : ContentPage
 		InitializeComponent();
 		BindingContext = vitaminsViewViewModel;
 	}
+
+	protected override void OnAppearing()
+	{
+		base.OnAppearing();
+		if (BindingContext is VitaminsViewViewModel vm)
+			_ = vm.InitializeAsync();
+	}
 }

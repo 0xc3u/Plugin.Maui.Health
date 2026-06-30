@@ -1,6 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Storage;
+using Plugin.Maui.Health.Constants;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
 using Plugin.Maui.Health.Sample.Controls;
@@ -165,6 +167,9 @@ public partial class MainPageViewModel : BaseViewModel
 		return Navigationservice.NavigateToViewAsync(menu.ViewType.Name);
 	}
 
+	const string SeededStepsKey = "seeded.steps";
+	static readonly int[] DemoSteps = { 6400, 9100, 7300, 11200, 8400, 5200, 8432 };
+
 	public override void OnAppearing(object param)
 	{
 		MenuItems = new ObservableCollection<Models.MenuItem>
@@ -173,19 +178,85 @@ public partial class MainPageViewModel : BaseViewModel
 			new Models.MenuItem("Vitamins", typeof(VitaminsView))
 		};
 
-		SeedShowcaseData();
+		ShowDemoData();          // instant placeholder so the page never flashes empty
+		_ = InitializeAsync();   // replace with real device data
 	}
 
-	// Representative weekly steps so the dashboard charts look complete on first view.
-	void SeedShowcaseData()
+	/// <summary>Writes showcase steps into the health store once, then loads the real values back.</summary>
+	async Task InitializeAsync()
 	{
-		int[] steps = { 6400, 9100, 7300, 11200, 8400, 5200, 8432 };
+		if (!Health.IsSupported)
+			return; // keep the in-memory demo data
+
+		try
+		{
+			IsBusy = true;
+
+			var granted = await Health.RequestPermissionAsync(HealthParameter.StepCount, PermissionType.Read | PermissionType.Write);
+			if (!granted)
+				return; // keep demo data
+
+			await SeedStepsOnceAsync();
+			await LoadStepsAsync();
+		}
+		catch (HealthException)
+		{
+			// Leave the demo data in place; the error was surfaced as a clear HealthException.
+		}
+		finally
+		{
+			IsBusy = false;
+		}
+	}
+
+	async Task SeedStepsOnceAsync()
+	{
+		if (Preferences.Get(SeededStepsKey, false))
+			return;
+
+		for (int i = 0; i < DemoSteps.Length; i++)
+		{
+			var day = new DateTimeOffset(DateTime.Now.Date.AddDays(i - (DemoSteps.Length - 1)).AddHours(9));
+			await Health.WriteAsync(HealthParameter.StepCount, day, DemoSteps[i], Units.Others.Count);
+		}
+
+		Preferences.Set(SeededStepsKey, true);
+	}
+
+	async Task LoadStepsAsync()
+	{
+		// Read step records for the week and bucket them per day. (ReadCountAsync aggregation is the
+		// other option, but reading records works consistently across devices and emulators.)
+		var weekStart = new DateTimeOffset(DateTime.Now.Date.AddDays(-6));
+		var samples = await Health.ReadAllAsync(HealthParameter.StepCount, weekStart, DateTimeOffset.Now.AddDays(1), Units.Others.Count);
+
+		var bars = new List<ChartEntry>();
+		double today = 0;
+		for (int i = 6; i >= 0; i--)
+		{
+			var day = DateTime.Now.Date.AddDays(-i);
+			var total = samples.Where(s => s.From?.LocalDateTime.Date == day).Sum(s => s.Value ?? 0);
+			bars.Add(new ChartEntry(total, new DateTimeOffset(day).ToString("ddd")));
+			if (i == 0)
+				today = total;
+		}
+
+		StepsThisWeek = new ObservableCollection<ChartEntry>(bars);
+		UpdateStepsHeader(today);
+	}
+
+	// Representative weekly steps so the dashboard looks complete before real data loads.
+	void ShowDemoData()
+	{
 		string[] days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 		StepsThisWeek = new ObservableCollection<ChartEntry>(
-			steps.Select((v, i) => new ChartEntry(v, days[i])));
+			DemoSteps.Select((v, i) => new ChartEntry(v, days[i])));
+		UpdateStepsHeader(DemoSteps[^1]);
+	}
 
+	void UpdateStepsHeader(double today)
+	{
 		const double goal = 10000;
-		double today = steps[^1];
 		StepsCount = today;
 		StepsTodayText = today.ToString("#,0");
 		StepsGoalProgress = Math.Clamp(today / goal, 0d, 1d);

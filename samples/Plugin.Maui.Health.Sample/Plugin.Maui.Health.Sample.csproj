@@ -19,6 +19,21 @@
 
 	</PropertyGroup>
 
+	<!-- iOS / MacCatalyst: apply the HealthKit entitlement so HealthKit is usable at runtime
+	     (without this it is silently dropped — "no entitlements"). Simulator builds apply it
+	     ad-hoc with no provisioning profile required. -->
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<CodesignEntitlements>Platforms/iOS/Entitlements.plist</CodesignEntitlements>
+	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
+	</PropertyGroup>
+
+	<!-- iOS privacy manifest (declares health-data usage). -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<BundleResource Include="Platforms/iOS/PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+	</ItemGroup>
+
 
 	<ItemGroup>
 		<!-- App Icon -->
