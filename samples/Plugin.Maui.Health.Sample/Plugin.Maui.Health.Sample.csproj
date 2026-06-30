@@ -5,8 +5,6 @@
 		<OutputType>Exe</OutputType>
 		<RootNamespace>Plugin.Maui.Health.Sample</RootNamespace>
 		<UseMaui>true</UseMaui>
-		<SingleProject>true</SingleProject>
-		<ImplicitUsings>enable</ImplicitUsings>
 
 		<!-- Display name -->
 		<ApplicationTitle>Plugin.Maui.Health.Sample</ApplicationTitle>
@@ -22,18 +20,6 @@
 	</PropertyGroup>
 
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
-		<SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-		<!-- Backward compatibility floor -->
-		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
-		<!-- Google Play compliance -->
-		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
-		<!-- Compiler baseline for API availability checks -->
-		<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
-	</PropertyGroup>
-	
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
@@ -49,11 +35,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
-		<!-- Pin to satisfy Health Connect's transitive requirement (>= 2.10.0.2) which conflicts with MAUI's older floor -->
-		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" Condition="$(TargetFramework.Contains('-android'))" />
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="CommunityToolkit.Maui" />
+		<PackageReference Include="Microsoft.Maui.Controls" />
+		<!-- MAUI 10.0.80 + Health Connect split the transitive AndroidX Lifecycle graph
+		     (some packages want LiveData.Core 2.9.x, others 2.11.x). Pin to the highest
+		     to resolve NU1107; this is the version NuGet itself recommends referencing. -->
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Condition="$(TargetFramework.Contains('-android'))" />
 	</ItemGroup>
 
 	<ItemGroup>

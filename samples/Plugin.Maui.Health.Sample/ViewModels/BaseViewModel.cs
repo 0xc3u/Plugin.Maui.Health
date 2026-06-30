@@ -27,23 +27,10 @@ public partial class BaseViewModel : ObservableObject, IViewModel
 	}
 
 	/// <summary>
-	/// Checks whether the given permission is granted. On Android, if not granted,
-	/// launches the Health Connect consent UI and re-checks after the user returns.
-	/// On iOS, HealthKit manages its own consent sheet on first access.
+	/// Ensures the given permission is granted, requesting it through the platform consent UI if needed.
+	/// The plugin handles the platform differences: on Android it launches the Health Connect consent
+	/// UI (when not already granted); on iOS HealthKit presents its own sheet.
 	/// </summary>
-	protected async Task<bool> EnsurePermissionAsync(HealthParameter parameter, PermissionType permissionType)
-	{
-		var hasPermission = await Health.CheckPermissionAsync(parameter, permissionType);
-		if (!hasPermission)
-		{
-#if ANDROID
-			if (MainActivity.Current is { } activity)
-			{
-				await activity.RequestHealthPermissionsAsync(parameter, permissionType);
-				hasPermission = await Health.CheckPermissionAsync(parameter, permissionType);
-			}
-#endif
-		}
-		return hasPermission;
-	}
+	protected Task<bool> EnsurePermissionAsync(HealthParameter parameter, PermissionType permissionType)
+		=> Health.RequestPermissionAsync(parameter, permissionType);
 }

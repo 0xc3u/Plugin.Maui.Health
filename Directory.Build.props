@@ -1,0 +1,25 @@
+<Project>
+
+	<!-- Shared build settings for every project in the repository. -->
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<SingleProject>true</SingleProject>
+	</PropertyGroup>
+
+	<!-- Shared platform minimums / SDK levels (applied per inner build). -->
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<!-- Health Connect requires API 30 as the backward-compatibility floor. -->
+		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+		<!-- Google Play target level. -->
+		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
+		<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<!-- HealthKit features used by this plugin require iOS 15 at minimum. -->
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+</Project>

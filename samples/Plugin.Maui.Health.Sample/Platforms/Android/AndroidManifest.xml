@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true">
-		<activity android:name=".MainActivity" android:exported="true">
+		<!--
+			Android 14+ (API 34+): privacy-policy / rationale entry point for the Health Connect
+			permission screen. The system requires this alias to present the permission request;
+			without it the request silently returns no result and the permission launcher hangs.
+			It targets PermissionsRationaleActivity, which also carries the
+			ACTION_SHOW_PERMISSIONS_RATIONALE filter (via attributes) used on Android 13 and below.
+		-->
+		<activity-alias
+			android:name="ViewPermissionUsageActivity"
+			android:exported="true"
+			android:targetActivity="com.companyname.pluginsample.PermissionsRationaleActivity"
+			android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
 			<intent-filter>
-				<action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+				<action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+				<category android:name="android.intent.category.HEALTH_PERMISSIONS" />
 			</intent-filter>
-		</activity>
+		</activity-alias>
 	</application>
 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

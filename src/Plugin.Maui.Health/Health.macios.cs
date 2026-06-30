@@ -254,6 +254,56 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	public async Task<bool> RequestPermissionAsync(HealthParameter healthParameter, PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+		{
+			throw new HealthException($"{healthParameter} not available");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var type = HKQuantityType.Create(requestedHealthParameter);
+			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? new NSSet(type) : null;
+			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? new NSSet(type) : null;
+
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			if (!success)
+			{
+				return false;
+			}
+
+			// HealthKit never reveals read-grant status, so only a write denial is detectable.
+			if (permissionType.HasFlag(PermissionType.Write) &&
+				healthStore.GetAuthorizationStatus(type) == HKAuthorizationStatus.SharingDenied)
+			{
+				return false;
+			}
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			throw new HealthException(ex.Message, ex);
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public Task<bool> RequestWorkoutPermissionAsync(PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+		// On iOS, requesting and checking workout authorization are the same HealthKit operation.
+		=> CheckWorkoutPermissionAsync(permissionType, cancellationToken);
+
 	/// <summary>
 	/// Reads the cumulative count of a specified <see cref="HealthParameter"/> within a given date range.
 	/// </summary>

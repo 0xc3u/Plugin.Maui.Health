@@ -1,0 +1,21 @@
+<Project>
+
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+
+	<!-- Single source of truth for every NuGet version used in the repository. -->
+	<ItemGroup>
+		<PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.80" />
+		<PackageVersion Include="Microsoft.Maui.Essentials" Version="10.0.80" />
+		<PackageVersion Include="CommunityToolkit.Maui" Version="14.2.0" />
+		<PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+	</ItemGroup>
+
+	<!-- Android-only -->
+	<ItemGroup>
+		<PackageVersion Include="Xamarin.AndroidX.Health.Connect.ConnectClient" Version="1.1.0.4" />
+		<PackageVersion Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.11.0.1" />
+	</ItemGroup>
+
+</Project>

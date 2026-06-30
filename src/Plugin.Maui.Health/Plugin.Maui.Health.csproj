@@ -1,13 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
-		<SingleProject>true</SingleProject>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">18.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">30.0</SupportedOSPlatformVersion>
-		
 		<!-- NuGet -->
 		<Authors>INDIKO</Authors>
 		<Copyright>Copyright © INDIKO and contributors</Copyright>
@@ -30,19 +24,6 @@
 	</PropertyGroup>
 
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
-		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-		<!-- Backward compatibility floor -->
-		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
-		<!-- Health Connect requires API 36 -->
-		<AndroidTargetSdkVersion>36</AndroidTargetSdkVersion>
-		<!-- Compiler baseline for API availability checks -->
-		<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
-	</PropertyGroup>
-	
-	
 	<!-- iOS & MacCatalyst -->
 	<ItemGroup Condition="$(TargetFramework.StartsWith('net')) == true AND $(TargetFramework.Contains('-ios')) != true AND $(TargetFramework.Contains('-maccatalyst')) != true ">
 		<Compile Remove="**\**\*.ios.cs" />
@@ -63,9 +44,8 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="all" IsImplicitlyDefined="true" />
-		<PackageReference Include="System.Management" Version="7.0.0" Condition="$(TargetFramework.Contains('-windows')) == true" />
-		<PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.50" />
+		<!-- SourceLink for GitHub is bundled with the .NET SDK; PublishRepositoryUrl/EmbedUntrackedSources enable it. -->
+		<PackageReference Include="Microsoft.Maui.Essentials" />
 	</ItemGroup>
 
 	<!-- Package additions -->
@@ -74,7 +54,7 @@
 		<None Include="..\..\README.md" PackagePath="README.md" Pack="true" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-		<PackageReference Include="Xamarin.AndroidX.Health.Connect.ConnectClient" Version="1.1.0.2" />
+		<PackageReference Include="Xamarin.AndroidX.Health.Connect.ConnectClient" />
 	</ItemGroup>
 
 </Project>

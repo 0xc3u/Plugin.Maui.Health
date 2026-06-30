@@ -21,6 +21,27 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Requests authorization for the given health parameter and permission type by presenting the
+	/// platform's consent UI, then reports whether the permission ends up granted. This is the
+	/// cross-platform way to obtain consent — the plugin maps the parameter to the correct native
+	/// permissions on each platform, so consumers do not need to register their own launcher or
+	/// re-implement the permission mapping.
+	/// </summary>
+	/// <returns>True if the required permissions are granted after the request completes.</returns>
+	/// <remarks>
+	/// On iOS, presents the HealthKit authorization sheet. HealthKit never reveals read-grant status,
+	/// so a read request returns <c>true</c> once the sheet has been shown; only write denials are
+	/// detectable.
+	/// On Android, if the permissions are already granted this returns <c>true</c> without prompting;
+	/// otherwise it launches the Health Connect consent UI using the current foreground
+	/// <c>Activity</c> (which must derive from AndroidX <c>ComponentActivity</c>, e.g.
+	/// <c>MauiAppCompatActivity</c>) and re-checks after the user returns. The app must still declare
+	/// the privacy-policy rationale entry points in its manifest (see the README).
+	/// </remarks>
+	Task<bool> RequestPermissionAsync(HealthParameter healthParameter, PermissionType permissionType,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Returns the cumulative sum of <paramref name="healthParameter"/> over the specified date range.
 	/// Only meaningful for inherently cumulative parameters (steps, distance, energy, floors).
 	/// </summary>
@@ -98,6 +119,20 @@ public interface IHealth
 	/// </remarks>
 	/// <returns>True if the required workout permissions are granted.</returns>
 	Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Requests authorization to read and/or write workout sessions and GPS routes by presenting the
+	/// platform's consent UI, then reports whether the permission ends up granted.
+	/// </summary>
+	/// <remarks>
+	/// On iOS, requests authorization for <c>HKObjectType.WorkoutType</c> and
+	/// <c>HKSeriesType.WorkoutRouteType</c>. On Android, if the workout permissions are already granted
+	/// this returns <c>true</c> without prompting; otherwise it launches the Health Connect consent UI
+	/// for the <c>EXERCISE</c> (and exercise-route) permissions using the current foreground
+	/// <c>Activity</c> and re-checks after the user returns.
+	/// </remarks>
+	/// <returns>True if the required workout permissions are granted after the request completes.</returns>
+	Task<bool> RequestWorkoutPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Returns all workout sessions of the specified type recorded in the given date range.

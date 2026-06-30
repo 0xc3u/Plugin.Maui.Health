@@ -186,6 +186,109 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// ── RequestPermissionAsync ────────────────────────────────────────────────
+
+	public async Task<bool> RequestPermissionAsync(HealthParameter healthParameter, PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+	{
+		var (readPerm, writePerm) = GetPermissions(healthParameter);
+		if (readPerm is null && writePerm is null)
+		{
+			throw new HealthException($"Not supported on Android: {healthParameter}");
+		}
+
+		// Already granted — don't prompt again.
+		if (await CheckPermissionAsync(healthParameter, permissionType, cancellationToken).ConfigureAwait(false))
+		{
+			return true;
+		}
+
+		var permissions = new Java.Util.HashSet();
+		if (permissionType.HasFlag(PermissionType.Read) && readPerm is not null)
+			permissions.Add(new Java.Lang.String(readPerm));
+		if (permissionType.HasFlag(PermissionType.Write) && writePerm is not null)
+			permissions.Add(new Java.Lang.String(writePerm));
+
+		await RequestFromHealthConnectAsync(permissions, cancellationToken).ConfigureAwait(false);
+
+		return await CheckPermissionAsync(healthParameter, permissionType, cancellationToken).ConfigureAwait(false);
+	}
+
+	// ── RequestWorkoutPermissionAsync ─────────────────────────────────────────
+
+	public async Task<bool> RequestWorkoutPermissionAsync(PermissionType permissionType,
+		CancellationToken cancellationToken = default)
+	{
+		if (await CheckWorkoutPermissionAsync(permissionType, cancellationToken).ConfigureAwait(false))
+		{
+			return true;
+		}
+
+		var permissions = new Java.Util.HashSet();
+		if (permissionType.HasFlag(PermissionType.Read))
+		{
+			permissions.Add(new Java.Lang.String("android.permission.health.READ_EXERCISE"));
+			permissions.Add(new Java.Lang.String("android.permission.health.READ_EXERCISE_ROUTES"));
+		}
+		if (permissionType.HasFlag(PermissionType.Write))
+		{
+			permissions.Add(new Java.Lang.String("android.permission.health.WRITE_EXERCISE"));
+			permissions.Add(new Java.Lang.String("android.permission.health.WRITE_EXERCISE_ROUTE"));
+		}
+
+		await RequestFromHealthConnectAsync(permissions, cancellationToken).ConfigureAwait(false);
+
+		return await CheckWorkoutPermissionAsync(permissionType, cancellationToken).ConfigureAwait(false);
+	}
+
+	// Launches the Health Connect consent UI for the given permission strings and completes when the
+	// user returns. Registers against the current Activity's ActivityResultRegistry at call time (the
+	// non-lifecycle overload, valid at any time) so consumers don't have to wire up their own launcher.
+	static Task RequestFromHealthConnectAsync(Java.Util.HashSet permissions, CancellationToken cancellationToken)
+	{
+		if (permissions.IsEmpty)
+		{
+			return Task.CompletedTask;
+		}
+
+		if (Platform.CurrentActivity is not AndroidX.Activity.ComponentActivity activity)
+		{
+			throw new HealthException(
+				"Requesting Health Connect permissions requires the current Activity to derive from AndroidX " +
+				"ComponentActivity (e.g. MauiAppCompatActivity).");
+		}
+
+		var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+
+		// Registering and launching must happen on the UI thread.
+		MainThread.BeginInvokeOnMainThread(() =>
+		{
+			try
+			{
+				var contract = PermissionController.CreateRequestPermissionResultContract();
+				var key = "plugin_maui_health_" + Guid.NewGuid().ToString("N");
+
+				AndroidX.Activity.Result.ActivityResultLauncher? launcher = null;
+				var callback = new PermissionResultCallback(() =>
+				{
+					launcher?.Unregister();
+					tcs.TrySetResult();
+				});
+
+				launcher = activity.ActivityResultRegistry.Register(key, contract, callback);
+				launcher.Launch(permissions);
+			}
+			catch (Exception ex)
+			{
+				tcs.TrySetException(new HealthException(ex.Message, ex));
+			}
+		});
+
+		return tcs.Task;
+	}
+
 	// ── ReadCountAsync ────────────────────────────────────────────────────────
 
 	public async Task<double> ReadCountAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
@@ -1410,6 +1513,14 @@ partial class HealthDataProviderImplementation : IHealth
 
 // Bridges a Kotlin suspend function call to a C# Task.
 // ResumeWith is called by the Kotlin runtime with the result (success or Kotlin Result$Failure).
+// Bridges the Java ActivityResultCallback block (Health Connect consent result) to a C# Action.
+sealed class PermissionResultCallback : Java.Lang.Object, AndroidX.Activity.Result.IActivityResultCallback
+{
+	readonly Action onResult;
+	public PermissionResultCallback(Action onResult) => this.onResult = onResult;
+	public void OnActivityResult(Java.Lang.Object? result) => onResult();
+}
+
 sealed class KotlinContinuation : Java.Lang.Object, IContinuation
 {
 	readonly TaskCompletionSource<Java.Lang.Object?> tcs =

@@ -155,9 +155,10 @@ if (!healthDataProvider.IsSupported)
 </PropertyGroup>
 
 <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-  <!-- Health Connect pulls a newer Lifecycle.LiveData.Core than MAUI bundles.
-       Pin it here to resolve the NU1107 version conflict at restore time. -->
-  <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
+  <!-- Health Connect and MAUI split the transitive AndroidX Lifecycle graph.
+       Pin LiveData.Core to the highest required version to resolve the NU1107
+       conflict at restore time (this is the version NuGet recommends referencing). -->
+  <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.11.0.1" />
 </ItemGroup>
 ```
 
@@ -169,7 +170,12 @@ Edit `Platforms/Android/AndroidManifest.xml`. Three things are required:
 
 **a) `<queries>` block** — tells Android that your app intends to interact with the Health Connect app. Without this the OS will not route Health Connect intents to your app on Android 11+.
 
-**b) Intent filter on `MainActivity`** — registers your activity as the screen shown when users tap "See all apps that can access this data" inside Health Connect. `android:exported="true"` is required on Android 12+ for any activity with an intent filter.
+**b) Privacy-policy / rationale entry point** — Health Connect shows a "privacy policy" link on its permission sheet and requires your app to own a screen explaining why it accesses health data. This must be declared **two ways**, and **both are required** — on **Android 14+ (API 34+) the system will not present the permission request at all if the `<activity-alias>` is missing, leaving your permission launcher hanging with no result**:
+
+- Android 13 and below — an `<activity>` with the `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` intent filter.
+- Android 14+ — an `<activity-alias>` named `ViewPermissionUsageActivity`, guarded by `android.permission.START_VIEW_PERMISSION_USAGE`, with the `VIEW_PERMISSION_USAGE` action and `HEALTH_PERMISSIONS` category, pointing at that same activity.
+
+`android:exported="true"` is required on Android 12+ for any activity (or alias) with an intent filter. Use a **dedicated** rationale activity rather than your launcher `MainActivity`.
 
 **c) `<uses-permission>` declarations** — declare every health permission your app needs. Only declare what you actually use; superfluous permissions slow down the consent sheet and may trigger Play Store review.
 
@@ -182,12 +188,19 @@ Edit `Platforms/Android/AndroidManifest.xml`. Three things are required:
     android:roundIcon="@mipmap/appicon_round"
     android:supportsRtl="true">
 
-    <!-- b) Register the rationale screen shown inside Health Connect -->
-    <activity android:name=".MainActivity" android:exported="true">
+    <!-- b) Android 13 and below: rationale screen shown inside Health Connect.
+         The activity itself is declared in code via [Activity]/[IntentFilter] —
+         here we only need the Android 14+ alias that points to it. -->
+    <activity-alias
+      android:name="ViewPermissionUsageActivity"
+      android:exported="true"
+      android:targetActivity="com.companyname.yourapp.PermissionsRationaleActivity"
+      android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
       <intent-filter>
-        <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
       </intent-filter>
-    </activity>
+    </activity-alias>
   </application>
 
   <!-- a) Allow the OS to discover the Health Connect app -->
@@ -204,87 +217,53 @@ Edit `Platforms/Android/AndroidManifest.xml`. Three things are required:
 </manifest>
 ```
 
----
-
-#### Step 4 — MainActivity: consent flow
-
-Health Connect does **not** auto-launch its permission sheet. You must register an `ActivityResultLauncher` in `MainActivity` and call it when `CheckPermissionAsync` returns `false`.
-
-The launcher uses `PermissionController.CreateRequestPermissionResultContract()` — the official Health Connect contract — and returns a `Task` so ViewModels can `await` it directly.
+Declare the rationale activity itself in `Platforms/Android/`. Set an explicit `Name` so the `<activity-alias>` above can target it reliably:
 
 ```csharp
-using Android.App;
-using Android.Content.PM;
-using Android.OS;
-using AndroidX.Activity.Result;
-using AndroidX.Activity.Result.Contract;
-using AndroidX.Health.Connect.Client;
-using Plugin.Maui.Health.Enums;
-
-namespace YourApp;
-
-[Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true,
-    ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation |
-                           ConfigChanges.UiMode | ConfigChanges.ScreenLayout |
-                           ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
-public class MainActivity : MauiAppCompatActivity
+[Activity(Name = "com.companyname.yourapp.PermissionsRationaleActivity", Exported = true)]
+[IntentFilter(new[] { "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" })]
+public class PermissionsRationaleActivity : Activity
 {
-    // Exposed so ViewModels can reach the launcher without DI.
-    public static MainActivity? Current { get; private set; }
-
-    ActivityResultLauncher? _permissionLauncher;
-    TaskCompletionSource? _pendingRequest;
-
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        Current = this;
         base.OnCreate(savedInstanceState);
-
-        _permissionLauncher = RegisterForActivityResult(
-            PermissionController.CreateRequestPermissionResultContract(),
-            new PermissionResultCallback(() =>
-            {
-                _pendingRequest?.TrySetResult();
-                _pendingRequest = null;
-            }));
-    }
-
-    protected override void OnDestroy()
-    {
-        if (Current == this) Current = null;
-        base.OnDestroy();
-    }
-
-    /// <summary>
-    /// Opens the Health Connect consent sheet for the given permission strings.
-    /// Returns after the user has granted or denied the request.
-    /// </summary>
-    public Task RequestHealthPermissionsAsync(IEnumerable<string> permissions)
-    {
-        if (_permissionLauncher is null) return Task.CompletedTask;
-
-        var javaSet = new Java.Util.HashSet();
-        foreach (var p in permissions)
-            javaSet.Add(new Java.Lang.String(p));
-
-        if (javaSet.IsEmpty) return Task.CompletedTask;
-
-        _pendingRequest = new TaskCompletionSource();
-        _permissionLauncher.Launch(javaSet);
-        return _pendingRequest.Task;
-    }
-
-    // Bridges the Java IActivityResultCallback interface to a C# Action.
-    sealed class PermissionResultCallback : Java.Lang.Object, IActivityResultCallback
-    {
-        readonly Action _onResult;
-        public PermissionResultCallback(Action onResult) => _onResult = onResult;
-        public void OnActivityResult(Java.Lang.Object? result) => _onResult();
+        var text = new TextView(this) { Text = "Explain why your app reads/writes health data here." };
+        text.SetPadding(48, 48, 48, 48);
+        SetContentView(text);
     }
 }
 ```
 
-> **Pattern for ViewModels:** Call `CheckPermissionAsync` first. If it returns `false`, call `MainActivity.Current?.RequestHealthPermissionsAsync(permissionStrings)` and `await` it, then call `CheckPermissionAsync` again to get the updated result.
+See the [official Health Connect guidance](https://developer.android.com/health-and-fitness/health-connect/get-started#show-privacy-policy) for details.
+
+---
+
+#### Step 4 — Requesting consent
+
+Health Connect does **not** auto-launch its permission sheet, but you no longer need to wire up your own
+`ActivityResultLauncher` — the plugin drives the consent flow for you. Just call `RequestPermissionAsync`
+(or `RequestWorkoutPermissionAsync`); it maps the `HealthParameter` to the right Health Connect
+permissions, launches the consent UI using the current `Activity` when needed, and reports whether the
+permission ended up granted:
+
+```csharp
+// Works on both Android and iOS. On Android the Health Connect consent UI is shown only when the
+// permission isn't already granted; on iOS HealthKit presents its own authorization sheet.
+var granted = await health.RequestPermissionAsync(
+    HealthParameter.StepCount, PermissionType.Read | PermissionType.Write);
+
+if (granted)
+{
+    var steps = await health.ReadCountAsync(HealthParameter.StepCount,
+        DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now);
+}
+```
+
+Your `MainActivity` only needs to be a standard `MauiAppCompatActivity` (the default). No launcher,
+no permission-string mapping, no `MainActivity.Current` plumbing.
+
+> Use `CheckPermissionAsync` when you only want to know the current grant state **without** prompting
+> (Android only — on iOS, checking and requesting are the same HealthKit operation).
 
 ---
 
@@ -304,7 +283,7 @@ Apps that access Health Connect data must comply with [Google's Health Connect p
 
 - Your app's **Privacy Policy** must disclose which health data types you access and how they are used.
 - In the Play Console, go to **App content → Health Connect** and complete the declaration form.
-- The `ACTION_SHOW_PERMISSIONS_RATIONALE` activity you registered in Step 3 must display a clear rationale screen explaining why the app needs each permission.
+- The rationale activity you registered in Step 3 (reachable via both `ACTION_SHOW_PERMISSIONS_RATIONALE` and the `ViewPermissionUsageActivity` alias) must display a clear screen explaining why the app needs each permission.
 
 Apps that skip these steps will be rejected during Play Store review.
 
@@ -357,7 +336,10 @@ var stepsCount = await Health.Default.ReadCountAsync(
 
 | Method | Description |
 |--------|-------------|
-| `CheckPermissionAsync(param, type)` | Checks whether the specified read/write permission is currently granted. |
+| `RequestPermissionAsync(param, type)` | Requests the specified read/write permission via the platform consent UI and returns whether it ended up granted. The cross-platform way to obtain consent. |
+| `RequestWorkoutPermissionAsync(type)` | Requests read/write access to workout sessions and GPS routes via the consent UI. |
+| `CheckPermissionAsync(param, type)` | Checks whether the specified read/write permission is currently granted (does not prompt on Android). |
+| `CheckWorkoutPermissionAsync(type)` | Checks whether workout (exercise) read/write permission is currently granted. |
 | `ReadCountAsync(param, from, until)` | Returns the cumulative sum for count-based parameters (e.g. steps, flights climbed). |
 | `ReadLatestAsync(param, from, until, unit)` | Returns the most recent single value within the date range. |
 | `ReadLatestAvailableAsync(param, unit)` | Returns the most recent value ever recorded, as a `Sample`. |
@@ -415,28 +397,20 @@ Units.Concentration.MillimolesPerLiter               // for BloodGlucose
 
 ## Code Examples
 
-### Check and request permissions
+### Request permissions
 
 ```csharp
-var hasPermission = await health.CheckPermissionAsync(
+// Presents the platform consent UI when needed and returns the resulting grant state.
+// No platform-specific code, launcher, or permission-string mapping required.
+var granted = await health.RequestPermissionAsync(
     HealthParameter.StepCount,
     PermissionType.Read | PermissionType.Write);
-
-if (!hasPermission)
-{
-    // iOS: HealthKit shows its own consent sheet automatically.
-    // Android: launch the Health Connect consent UI via your ActivityResultLauncher.
-#if ANDROID
-    (Platform.CurrentActivity as MainActivity)?.RequestHealthPermissions(
-        new[] { "android.permission.health.READ_STEPS", "android.permission.health.WRITE_STEPS" });
-#endif
-}
 ```
 
 ### Read step count (last 24 hours)
 
 ```csharp
-var hasPermission = await health.CheckPermissionAsync(HealthParameter.StepCount, PermissionType.Read);
+var hasPermission = await health.RequestPermissionAsync(HealthParameter.StepCount, PermissionType.Read);
 if (hasPermission)
 {
     var steps = await health.ReadCountAsync(
@@ -456,7 +430,7 @@ double kg = sample?.Value ?? 0;
 ### Write body mass
 
 ```csharp
-var hasPermission = await health.CheckPermissionAsync(HealthParameter.BodyMass, PermissionType.Write);
+var hasPermission = await health.RequestPermissionAsync(HealthParameter.BodyMass, PermissionType.Write);
 if (hasPermission)
 {
     await health.WriteAsync(HealthParameter.BodyMass, DateTimeOffset.Now, 75.5, Units.Mass.Kilograms);
