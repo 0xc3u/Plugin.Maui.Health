@@ -1502,9 +1502,14 @@ partial class HealthDataProviderImplementation : IHealth
 	// Get the Kotlin KClass for a managed Android type T.
 	static IKClass GetKClass<T>() where T : Java.Lang.Object
 	{
+		// JNIEnv.FindClass returns a runtime-cached JNI *global* reference. Wrapping it with
+		// TransferLocalRef makes the runtime later free it via DeleteLocalRef, which aborts the
+		// process under CheckJNI (Android 14+) with "expected reference of kind Local but found
+		// Global". Use DoNotTransfer so the wrapper doesn't take ownership of the cached global
+		// ref, and don't dispose it (we don't own it).
 		nint classRef = JNIEnv.FindClass(typeof(T));
-		using var javaClass = Java.Lang.Object.GetObject<Java.Lang.Class>(
-			classRef, JniHandleOwnership.TransferLocalRef)!;
+		var javaClass = Java.Lang.Object.GetObject<Java.Lang.Class>(
+			classRef, JniHandleOwnership.DoNotTransfer)!;
 		return JvmClassMappingKt.GetKotlinClass(javaClass);
 	}
 }
