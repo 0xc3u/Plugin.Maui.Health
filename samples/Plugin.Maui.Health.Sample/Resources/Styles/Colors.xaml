@@ -41,4 +41,21 @@
     <Color x:Key="Blue200Accent">#72ACF1</Color>
     <Color x:Key="Blue300Accent">#A7CBF6</Color>
 
+    <!-- Light, card-based sample theme -->
+    <Color x:Key="PageBackground">#F4F6FB</Color>
+    <Color x:Key="CardBackground">#FFFFFF</Color>
+    <Color x:Key="TextPrimary">#1B1D28</Color>
+    <Color x:Key="TextSecondary">#6B7280</Color>
+    <Color x:Key="Hairline">#ECEEF3</Color>
+
+    <Color x:Key="AccentBlue">#3E8EED</Color>
+    <Color x:Key="AccentCyan">#28C2D1</Color>
+    <Color x:Key="AccentGreen">#34C759</Color>
+    <Color x:Key="AccentPink">#FF6B8A</Color>
+    <Color x:Key="AccentAmber">#F7B548</Color>
+    <Color x:Key="AccentViolet">#7C5CFC</Color>
+
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="{StaticResource PageBackground}"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackground}"/>
+
 </ResourceDictionary>

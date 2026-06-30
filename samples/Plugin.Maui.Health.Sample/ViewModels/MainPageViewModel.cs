@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
+using Plugin.Maui.Health.Sample.Controls;
 using Plugin.Maui.Health.Sample.Services;
 using Plugin.Maui.Health.Sample.Views;
 
@@ -22,6 +23,19 @@ public partial class MainPageViewModel : BaseViewModel
 
 	[ObservableProperty]
 	ObservableCollection<Models.MenuItem> menuItems;
+
+	// Showcase data for the dashboard charts.
+	[ObservableProperty]
+	ObservableCollection<ChartEntry> stepsThisWeek = new();
+
+	[ObservableProperty]
+	double stepsGoalProgress;
+
+	[ObservableProperty]
+	string stepsGoalText = "0%";
+
+	[ObservableProperty]
+	string stepsTodayText = "0";
 
 	public MainPageViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
@@ -153,13 +167,28 @@ public partial class MainPageViewModel : BaseViewModel
 
 	public override void OnAppearing(object param)
 	{
-		StepsCount = 0;
-
 		MenuItems = new ObservableCollection<Models.MenuItem>
 		{
 			new Models.MenuItem("Body Measurements", typeof(BodyMeasurementsView)),
 			new Models.MenuItem("Vitamins", typeof(VitaminsView))
 		};
 
+		SeedShowcaseData();
+	}
+
+	// Representative weekly steps so the dashboard charts look complete on first view.
+	void SeedShowcaseData()
+	{
+		int[] steps = { 6400, 9100, 7300, 11200, 8400, 5200, 8432 };
+		string[] days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+		StepsThisWeek = new ObservableCollection<ChartEntry>(
+			steps.Select((v, i) => new ChartEntry(v, days[i])));
+
+		const double goal = 10000;
+		double today = steps[^1];
+		StepsCount = today;
+		StepsTodayText = today.ToString("#,0");
+		StepsGoalProgress = Math.Clamp(today / goal, 0d, 1d);
+		StepsGoalText = $"{StepsGoalProgress * 100:F0}%";
 	}
 }

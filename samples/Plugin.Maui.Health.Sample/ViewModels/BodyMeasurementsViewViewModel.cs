@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using Plugin.Maui.Health.Sample.Services;
+using Plugin.Maui.Health.Sample.Controls;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
 using CommunityToolkit.Mvvm.Input;
@@ -27,9 +28,39 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	[ObservableProperty]
 	ObservableCollection<Health.Models.Sample> bodyFatPercentageSamples;
 
+	// Chart-bound data for the MAUI.Graphics controls.
+	[ObservableProperty]
+	ObservableCollection<ChartEntry> weightTrend = new();
+
+	[ObservableProperty]
+	double bmiProgress;
+
+	[ObservableProperty]
+	string bmiValueText = "--";
+
 	public BodyMeasurementsViewViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
+		SeedShowcaseData();
+	}
 
+	// Representative data so the charts look complete on first view; replaced by real reads.
+	void SeedShowcaseData()
+	{
+		Height = 178;
+		BodyMass = 72.5;
+		SetBmi(22.9);
+
+		double[] trend = { 74.1, 73.6, 73.8, 73.1, 72.9, 72.4, 72.6, 72.5 };
+		var today = DateTimeOffset.Now;
+		WeightTrend = new ObservableCollection<ChartEntry>(
+			trend.Select((v, i) => new ChartEntry(v, today.AddDays(i - trend.Length + 1).ToString("MM/dd"))));
+	}
+
+	void SetBmi(double value)
+	{
+		BodyMassIndex = value;
+		BmiValueText = value > 0 ? value.ToString("F1") : "--";
+		BmiProgress = Math.Clamp(value / 40d, 0d, 1d);
 	}
 
 	[RelayCommand]
@@ -41,7 +72,7 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	[RelayCommand]
 	async Task ReadBodyMassIndex()
 	{
-		await ReadBodyMeasurement(HealthParameter.BodyMassIndex, Units.Others.Count, value => BodyMassIndex = value);
+		await ReadBodyMeasurement(HealthParameter.BodyMassIndex, Units.Others.Count, SetBmi);
 	}
 
 	[RelayCommand]
@@ -93,6 +124,12 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 			{
 				var bodyMassSamples = await Health.ReadAllAsync(Enums.HealthParameter.BodyMass, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, Constants.Units.Mass.Kilograms);
 				BodyMassSamples = new ObservableCollection<Health.Models.Sample>(bodyMassSamples);
+
+				if (bodyMassSamples.Count > 0)
+				{
+					WeightTrend = new ObservableCollection<ChartEntry>(
+						bodyMassSamples.Select(s => new ChartEntry(s.Value ?? 0, s.From?.ToString("MM/dd"))));
+				}
 			}
 			else
 			{

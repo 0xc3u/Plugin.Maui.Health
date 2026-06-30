@@ -1,109 +1,91 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
-			 xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
              x:Class="Plugin.Maui.Health.Sample.Views.BodyMeasurementsView"
-			 x:DataType="vm:BodyMeasurementsViewViewModel"
+             x:DataType="vm:BodyMeasurementsViewViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
              Title="Body Measurements">
-	<ScrollView Orientation="Vertical">
-		<VerticalStackLayout Spacing="10" Padding="10">
-			<ActivityIndicator IsRunning="{Binding IsBusy}"/>
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
 
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Height"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Last Value" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding Height, StringFormat='{0:F2} cm'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadHeightCommand}" Text="Read"></Button>
-				</Grid>
-			</Frame>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Body Mass"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Last Value" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding BodyMass, StringFormat='{0:F2} kg'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadBodyMassCommand}" Text="Read"></Button>
+            <!-- Summary: BMI ring + key stats -->
+            <Border Style="{StaticResource Card}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
+                    <charts:RingChartView Grid.Column="0"
+                                          WidthRequest="120" HeightRequest="120"
+                                          Progress="{Binding BmiProgress}"
+                                          ValueText="{Binding BmiValueText}"
+                                          Caption="BMI"
+                                          RingColor="{StaticResource AccentViolet}" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
+                        <Label Text="Body composition" Style="{StaticResource SectionHeader}" />
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Height" Style="{StaticResource MetricCaption}" />
+                            <Label Text="{Binding Height, StringFormat='{0:F0} cm'}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Body mass" Style="{StaticResource MetricCaption}" />
+                            <Label Text="{Binding BodyMass, StringFormat='{0:F1} kg'}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
 
-					<Entry Grid.Row="2" Grid.Column="0" Text="{Binding NewBodyMass}" Placeholder="Steps" Keyboard="Numeric"/>
-					<Button Grid.Row="2" Grid.Column="1" Command="{Binding WriteBodyMassCommand}" Text="Write"></Button>
+            <!-- Weight trend (line chart) -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Weight trend" Style="{StaticResource SectionHeader}" />
+                            <Label Text="{Binding BodyMass, StringFormat='{0:F1} kg'}" Style="{StaticResource MetricValue}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Read" Style="{StaticResource AccentButton}"
+                                Command="{Binding ReadAllBodyMassSamplesCommand}" VerticalOptions="Center" />
+                    </Grid>
+                    <charts:LineChartView Entries="{Binding WeightTrend}" LineColor="{StaticResource AccentBlue}" />
+                </VerticalStackLayout>
+            </Border>
 
-				</Grid>
-			</Frame>
+            <!-- Height -->
+            <Border Style="{StaticResource Card}">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2">
+                    <Label Grid.Row="0" Text="Height" Style="{StaticResource MetricCaption}" />
+                    <Label Grid.Row="1" Text="{Binding Height, StringFormat='{0:F0} cm'}" Style="{StaticResource MetricValue}" />
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="Read" Style="{StaticResource SoftButton}"
+                            Command="{Binding ReadHeightCommand}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
 
+            <!-- Body Mass (read + write) -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2">
+                        <Label Grid.Row="0" Text="Body Mass" Style="{StaticResource MetricCaption}" />
+                        <Label Grid.Row="1" Text="{Binding BodyMass, StringFormat='{0:F1} kg'}" Style="{StaticResource MetricValue}" />
+                        <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="Read" Style="{StaticResource SoftButton}"
+                                Command="{Binding ReadBodyMassCommand}" VerticalOptions="Center" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Grid.Column="0" Text="{Binding NewBodyMass}" Placeholder="Enter kg" Keyboard="Numeric" Style="{StaticResource SoftEntry}" />
+                        <Button Grid.Column="1" Text="Write" Style="{StaticResource AccentButton}" Command="{Binding WriteBodyMassCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
 
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Body Mass Index"  FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Last Value" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding BodyMassIndex, StringFormat='{0:F2}'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadBodyMassIndexCommand}" Text="Read"></Button>
-				</Grid>
-			</Frame>
+            <!-- Body Mass Index -->
+            <Border Style="{StaticResource Card}">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2">
+                    <Label Grid.Row="0" Text="Body Mass Index" Style="{StaticResource MetricCaption}" />
+                    <Label Grid.Row="1" Text="{Binding BodyMassIndex, StringFormat='{0:F1}'}" Style="{StaticResource MetricValue}" />
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="Read" Style="{StaticResource SoftButton}"
+                            Command="{Binding ReadBodyMassIndexCommand}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
 
-
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto, Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Historical Body Mass" 
-						FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-					
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadAllBodyMassSamplesCommand}" Text="Read"></Button>
-
-					<CollectionView Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-						ItemsSource="{Binding BodyMassSamples}" ItemSizingStrategy="MeasureFirstItem"
-						HeightRequest="150">
-						<CollectionView.ItemTemplate>
-							<DataTemplate x:DataType="m:Sample">
-								<Grid ColumnDefinitions="*,*">
-									<Label Grid.Column="0" Text="{Binding From}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start"></Label>
-									<Label Grid.Column="1" Text="{Binding Value}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start">
-										<Label.FormattedText>
-											<FormattedString>
-												<FormattedString.Spans>
-													<Span Text="{Binding Value, StringFormat='{0:F2}'}"></Span>
-													<Span Text=" "></Span>
-													<Span Text="{Binding Unit}"></Span>
-												</FormattedString.Spans>
-											</FormattedString>
-										</Label.FormattedText>
-									</Label>
-								</Grid>
-							</DataTemplate>
-						</CollectionView.ItemTemplate>
-					</CollectionView>
-
-				</Grid>
-			</Frame>
-
-
-		</VerticalStackLayout>
-	</ScrollView>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

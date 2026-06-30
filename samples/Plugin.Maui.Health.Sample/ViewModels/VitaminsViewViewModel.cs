@@ -1,8 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Plugin.Maui.Health.Constants;
 using Plugin.Maui.Health.Enums;
 using Plugin.Maui.Health.Exceptions;
+using Plugin.Maui.Health.Sample.Controls;
 using Plugin.Maui.Health.Sample.Services;
 
 namespace Plugin.Maui.Health.Sample.ViewModels;
@@ -33,8 +35,27 @@ public partial class VitaminsViewViewModel : BaseViewModel
 	[ObservableProperty]
 	double vitaminK;
 
+	// Bar chart showing each vitamin as a percentage of its reference daily intake,
+	// so values on very different mg scales remain comparable.
+	[ObservableProperty]
+	ObservableCollection<ChartEntry> vitaminLevels = new();
+
 	public VitaminsViewViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
+		// Representative intake so the chart looks complete on first view; replaced by real reads.
+		VitaminC = 82; VitaminD = 0.015; VitaminE = 12; VitaminB6 = 1.6; VitaminB12 = 0.0024; VitaminK = 0.11;
+		RefreshChart();
+	}
+
+	void RefreshChart()
+	{
+		(string label, double value, double rdi)[] items =
+		{
+			("C", VitaminC, 90), ("D", VitaminD, 0.02), ("E", VitaminE, 15),
+			("B6", VitaminB6, 1.7), ("B12", VitaminB12, 0.0024), ("K", VitaminK, 0.12),
+		};
+		VitaminLevels = new ObservableCollection<ChartEntry>(
+			items.Select(i => new ChartEntry(i.rdi > 0 ? Math.Round(i.value / i.rdi * 100) : 0, i.label)));
 	}
 
 	[RelayCommand]
@@ -115,6 +136,7 @@ public partial class VitaminsViewViewModel : BaseViewModel
 			{
 				var value = await Health.ReadLatestAsync(vitamin, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now, unit);
 				callback(value ?? 0);
+				RefreshChart();
 			}
 			else
 			{

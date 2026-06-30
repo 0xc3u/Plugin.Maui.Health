@@ -1,150 +1,67 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-			 xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
-			 xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
-			 xmlns:m2="clr-namespace:Plugin.Maui.Health.Sample.Models"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
+             xmlns:m2="clr-namespace:Plugin.Maui.Health.Sample.Models"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
-			 x:DataType="vm:MainPageViewModel"
+             x:DataType="vm:MainPageViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
              Title="Plugin.Maui.Health Sample">
 
-	
-	<VerticalStackLayout Padding="20" Spacing="10">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
 
-			<ActivityIndicator IsRunning="{Binding IsBusy}"></ActivityIndicator>
+            <!-- Header -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Your health" Style="{StaticResource ScreenTitle}" />
+                <Label Text="Powered by Plugin.Maui.Health" Style="{StaticResource MutedLabel}" />
+            </VerticalStackLayout>
 
-			<CollectionView ItemsSource="{Binding MenuItems}" ItemSizingStrategy="MeasureFirstItem">
-			<CollectionView.ItemTemplate>
-				<DataTemplate x:DataType="m2:MenuItem">
-					<Grid Padding="10" RowDefinitions="Auto, 5" ColumnDefinitions="*">
-						<Grid.GestureRecognizers>
-							<TapGestureRecognizer NumberOfTapsRequired="1"
-								Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainPageViewModel}}, Path=OpenViewCommand}"		
-								CommandParameter="{Binding .}" />
-						</Grid.GestureRecognizers>
-						<Label Grid.Row="0" Grid.Column="0" Text="{Binding Title}" FontAttributes="Bold" FontSize="Medium" VerticalOptions="Center" HorizontalOptions="Start"></Label>
-						<Line Grid.Row="1" Grid.Column="0" BackgroundColor="{StaticResource Primary}" HeightRequest="1" VerticalOptions="Center" HorizontalOptions="Center"></Line>
-					</Grid>
-				</DataTemplate>
-			</CollectionView.ItemTemplate>
-			</CollectionView>
-				
+            <!-- Steps showcase: goal ring + weekly bar chart -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="16">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
+                        <charts:RingChartView Grid.Column="0"
+                                              WidthRequest="110" HeightRequest="110"
+                                              Progress="{Binding StepsGoalProgress}"
+                                              ValueText="{Binding StepsGoalText}"
+                                              Caption="Goal"
+                                              RingColor="{StaticResource AccentGreen}" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Steps today" Style="{StaticResource MetricCaption}" />
+                            <Label Text="{Binding StepsTodayText}" Style="{StaticResource MetricValue}" />
+                            <Label Text="Goal 10,000" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Label Text="This week" Style="{StaticResource SectionHeader}" />
+                    <charts:BarChartView Entries="{Binding StepsThisWeek}" BarColor="{StaticResource AccentCyan}" />
+                </VerticalStackLayout>
+            </Border>
 
-			<!--<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Step Count" 
-						   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
+            <!-- Explore -->
+            <Label Text="Explore" Style="{StaticResource SectionHeader}" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding MenuItems}" Spacing="12">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="m2:MenuItem">
+                        <Border Style="{StaticResource Card}" Padding="16">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer NumberOfTapsRequired="1"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainPageViewModel}}, Path=OpenViewCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="{Binding Title}" FontSize="16" FontAttributes="Bold"
+                                       TextColor="{StaticResource TextPrimary}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="›" FontSize="26" TextColor="{StaticResource TextSecondary}" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
 
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Steps" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding StepsCount}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadStepsCountAsnycCommand}" Text="Read"></Button>
-					<Entry Grid.Row="2" Grid.Column="0" Text="{Binding StepsCountWrite}" Placeholder="Steps" Keyboard="Numeric"/>
-					<Button Grid.Row="2" Grid.Column="1" Command="{Binding WriteStepsCountCommand}" Text="Write"></Button>
-				</Grid>
-			</Frame>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 
-			<Line BackgroundColor="{x:StaticResource Primary}" />
-
-
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto, Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Body Mass" 
-				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Body Mass" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding BodyMass, StringFormat='{0:F2} kg'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadAllBodyMassSamplesCommand}" Text="Read"></Button>
-
-					<CollectionView Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-									ItemsSource="{Binding BodyMassSamples}" ItemSizingStrategy="MeasureFirstItem"
-									HeightRequest="150">
-						<CollectionView.ItemTemplate>
-							<DataTemplate x:DataType="m:Sample">
-								<Grid ColumnDefinitions="*,*">
-									<Label Grid.Column="0" Text="{Binding From}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start"></Label>
-									<Label Grid.Column="1" Text="{Binding Value}" FontSize="Small" VerticalOptions="Center" HorizontalOptions="Start">
-										<Label.FormattedText>
-											<FormattedString>
-												<FormattedString.Spans>
-													<Span Text="{Binding Value, StringFormat='{0:F2}'}"></Span>
-													<Span Text=" "></Span>
-													<Span Text="{Binding Unit}"></Span>
-												</FormattedString.Spans>
-											</FormattedString>
-										</Label.FormattedText>
-									</Label>
-								</Grid>
-							</DataTemplate>
-						</CollectionView.ItemTemplate>
-					</CollectionView>
-					
-				</Grid>
-			</Frame>
-
-			<Line BackgroundColor="{x:StaticResource Primary}" />
-
-			--><!--<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Vitamin C" 
-				   FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="Vitamin C" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding VitaminC, StringFormat='{0:F2} mg'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVitaminCommand}" Text="Read"></Button>
-				</Grid>
-			</Frame>
-
-			<Line BackgroundColor="{x:StaticResource Primary}" />--><!--
-
-			<Frame Padding="5">
-				<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
-					<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="V2Omax" 
-						FontAttributes="Bold" FontSize="Header" FontAutoScalingEnabled="True" />
-
-					<Label Grid.Row="1" Grid.Column="0" >
-						<Label.FormattedText>
-							<FormattedString>
-								<FormattedString.Spans>
-									<Span Text="V2Omax" FontAttributes="Bold"></Span>
-									<Span Text=" "></Span>
-									<Span Text="{Binding Vo2max, StringFormat='{0:F2}'}"></Span>
-								</FormattedString.Spans>
-							</FormattedString>
-						</Label.FormattedText>
-					</Label>
-					<Button Grid.Row="1" Grid.Column="1" Command="{Binding ReadVO2MaxCommand}" Text="Read"></Button>
-				</Grid>
-			</Frame>-->
-
-
-		</VerticalStackLayout>
-
-
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
