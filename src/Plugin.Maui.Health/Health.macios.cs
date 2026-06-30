@@ -588,30 +588,31 @@ partial class HealthDataProviderImplementation : IHealth
 			HKSampleQuery query = new(quantityType, predicate, HKSampleQuery.NoLimit, new NSSortDescriptor[] { new NSSortDescriptor(HKSample.SortIdentifierEndDate, true) },
 				(HKSampleQuery _, HKSample[] results, NSError error) =>
 				{
-					if (error == null && results != null)
+					// Any exception thrown here would otherwise be swallowed by HealthKit and leave the
+					// awaiting tcs (and the caller) hanging forever — always complete the tcs.
+					try
 					{
-						foreach (HKQuantitySample hkSample in results.Cast<HKQuantitySample>())
+						if (error != null)
 						{
-							if (hkSample == null)
-							{
-								continue;
-							}
+							tcs.TrySetException(new HealthException(error.LocalizedDescription));
+							return;
+						}
 
+						HKUnit hkUnit = GetHKUnit(unit);
+						foreach (var hkSample in (results ?? Array.Empty<HKSample>()).OfType<HKQuantitySample>())
+						{
 							var source = hkSample.Source?.Name ?? string.Empty;
-							HKUnit hkUnit = GetHKUnit(unit);
-
-							var sample = new Sample(ToDateTimeOffset(hkSample.StartDate), ToDateTimeOffset(hkSample.EndDate),
-									hkSample.Quantity.GetDoubleValue(hkUnit),
-									source,
-									unit,
-									description: hkSample.Quantity.Description);
-							healthValues.Add(sample);
+							healthValues.Add(new Sample(ToDateTimeOffset(hkSample.StartDate), ToDateTimeOffset(hkSample.EndDate),
+								hkSample.Quantity.GetDoubleValue(hkUnit),
+								source,
+								unit,
+								description: hkSample.Quantity.Description));
 						}
 						tcs.TrySetResult(healthValues);
 					}
-					else
+					catch (Exception ex)
 					{
-						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? "Unknown error"));
+						tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
 					}
 				});
 
@@ -676,13 +677,23 @@ partial class HealthDataProviderImplementation : IHealth
 
 			healthStore.SaveObject(sample, (success, error) =>
 			{
-				if (success)
+				// Never let an exception in this callback (e.g. a null error) leave the tcs — and the
+				// caller — hanging. Always complete it.
+				try
 				{
-					tcs.TrySetResult(true);
+					if (success)
+					{
+						tcs.TrySetResult(true);
+					}
+					else
+					{
+						tcs.TrySetException(new HealthException(
+							error?.LocalizedDescription ?? $"Failed to write {healthParameter} to HealthKit."));
+					}
 				}
-				else
+				catch (Exception ex)
 				{
-					tcs.TrySetException(new HealthException(error.LocalizedDescription));
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
 				}
 			});
 			return await tcs.Task.ConfigureAwait(false);
