@@ -423,6 +423,43 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `Until` | `DateTimeOffset` | Segment end time |
 | `Stage` | `SleepStage` | The stage during this segment |
 
+**`StatisticsBucket`** — one time bucket returned by `ReadStatisticsAsync`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `From` / `Until` | `DateTimeOffset` | Bucket bounds (local time) |
+| `Value` | `double?` | Sum (cumulative params) or average (discrete); `null` if empty and discrete |
+| `Count` | `int` | Number of samples in the bucket |
+
+**`MindfulnessSession`** — returned by `ReadMindfulnessAsync` (and passed to `WriteMindfulnessAsync`):
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `From` / `Until` | `DateTimeOffset` | Session bounds |
+| `DurationInSeconds` | `double` | Total span |
+| `Source` | `string?` | App/device that recorded it |
+
+**`CycleEntry`** — a menstrual-cycle / reproductive-health entry (the relevant value field depends on `Type`):
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Time` | `DateTimeOffset` | When the entry occurred |
+| `Type` | `CycleEventType` | Which event this is |
+| `Flow` | `MenstruationFlow` | For `MenstruationFlow` entries |
+| `OvulationResult` | `OvulationTestResult` | For `OvulationTest` entries |
+| `Protection` | `SexualActivityProtection` | For `SexualActivity` entries |
+| `Source` | `string?` | App/device that recorded it |
+
+**`HealthCharacteristics`** — returned by `ReadCharacteristicsAsync` (iOS only, read-only):
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `DateOfBirth` | `DateTimeOffset?` | Date of birth |
+| `BiologicalSex` | `BiologicalSex` | Biological sex |
+| `BloodType` | `BloodType` | Blood type |
+| `SkinType` | `FitzpatrickSkinType` | Fitzpatrick skin type (I–VI) |
+| `WheelchairUse` | `WheelchairUse` | Wheelchair use |
+
 ### Enums
 
 | Enum | Values |
@@ -431,6 +468,16 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `HealthParameter` | ~100 values (steps, heart rate, body metrics, blood values, nutrition/vitamins, mobility …). See the matrix below. |
 | `WorkoutType` | Activity types (`Running`, `Cycling`, `Swimming`, …). Use `WorkoutType.Other` to match/return **all** types. |
 | `SleepStage` | `Unknown`, `Awake`, `InBed`, `Sleeping`, `Light`, `Deep`, `Rem` — normalised across HealthKit and Health Connect. |
+| `StatisticsInterval` | `Hourly`, `Daily`, `Weekly`, `Monthly` — the bucket size for `ReadStatisticsAsync`. |
+| `RecordingMethod` | `Unknown`, `Manual`, `Automatic`, `ActivelyRecorded` — how a `Sample` was recorded. |
+| `CycleEventType` | `MenstruationFlow`, `OvulationTest`, `SexualActivity`, `IntermenstrualBleeding`. |
+| `MenstruationFlow` | `Unspecified`, `None`, `Light`, `Medium`, `Heavy`. |
+| `OvulationTestResult` | `Unspecified`, `Negative`, `Positive`, `High`. |
+| `SexualActivityProtection` | `Unspecified`, `Protected`, `Unprotected`. |
+| `BiologicalSex` | `NotSet`, `Female`, `Male`, `Other`. |
+| `BloodType` | `NotSet`, `APositive`, `ANegative`, `BPositive`, `BNegative`, `ABPositive`, `ABNegative`, `OPositive`, `ONegative`. |
+| `FitzpatrickSkinType` | `NotSet`, `I`, `II`, `III`, `IV`, `V`, `VI`. |
+| `WheelchairUse` | `NotSet`, `No`, `Yes`. |
 
 ### Units
 
@@ -636,6 +683,87 @@ var session = new SleepSession
 await health.WriteSleepAsync(session);
 ```
 
+### Bucketed statistics (daily / weekly …)
+
+```csharp
+// Daily step totals for the last week (cumulative params are summed, discrete ones averaged).
+var days = await health.ReadStatisticsAsync(
+    HealthParameter.StepCount,
+    DateTimeOffset.Now.Date.AddDays(-6),
+    DateTimeOffset.Now,
+    StatisticsInterval.Daily,
+    Units.Others.Count);
+
+foreach (var bucket in days)
+    Console.WriteLine($"{bucket.From:ddd}: {bucket.Value:0} steps");
+```
+
+### Batch write, delete, and upsert
+
+```csharp
+// Write many samples in one call (bulk import).
+await health.WriteAllAsync(HealthParameter.BodyMass, new[]
+{
+    (DateTimeOffset.Now.AddDays(-2), 74.8),
+    (DateTimeOffset.Now.AddDays(-1), 74.5),
+    (DateTimeOffset.Now,             74.6),
+}, Units.Mass.Kilograms);
+
+// Delete this app's samples for a parameter in a range.
+await health.DeleteAsync(HealthParameter.BodyMass, DateTimeOffset.Now.AddDays(-7), DateTimeOffset.Now);
+
+// Upsert: repeated writes with the same client id replace the previous value (no duplicates).
+await health.UpsertAsync(HealthParameter.BodyMass, DateTimeOffset.Now, 75.1, Units.Mass.Kilograms, clientId: "morning-weigh-in");
+```
+
+### Provenance on samples
+
+```csharp
+var samples = await health.ReadAllAsync(HealthParameter.HeartRate, from, until, Units.Others.CountPerMinute);
+foreach (var s in samples)
+    Console.WriteLine($"{s.Value} bpm — {s.Source} / {s.Device ?? "?"} ({s.RecordingMethod})");
+```
+
+### Mindfulness sessions (iOS)
+
+```csharp
+if (await health.RequestMindfulnessPermissionAsync(PermissionType.Read | PermissionType.Write))
+{
+    await health.WriteMindfulnessAsync(new MindfulnessSession
+    {
+        From = DateTimeOffset.Now.AddMinutes(-10),
+        Until = DateTimeOffset.Now,
+    });
+
+    var sessions = await health.ReadMindfulnessAsync(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now);
+}
+```
+
+### Reproductive / cycle tracking
+
+```csharp
+if (await health.RequestCyclePermissionAsync(PermissionType.Read | PermissionType.Write))
+{
+    await health.WriteCycleAsync(new CycleEntry
+    {
+        Time = DateTimeOffset.Now,
+        Type = CycleEventType.MenstruationFlow,
+        Flow = MenstruationFlow.Medium,
+    });
+
+    var entries = await health.ReadCycleAsync(DateTimeOffset.Now.AddDays(-30), DateTimeOffset.Now);
+    foreach (var e in entries.Where(e => e.Type == CycleEventType.OvulationTest))
+        Console.WriteLine($"{e.Time:d}: ovulation {e.OvulationResult}");
+}
+```
+
+### Profile characteristics (iOS)
+
+```csharp
+var profile = await health.ReadCharacteristicsAsync();
+Console.WriteLine($"{profile.BiologicalSex}, born {profile.DateOfBirth:d}, blood {profile.BloodType}");
+```
+
 ### Error handling
 
 Every method throws a single exception type — `HealthException` — for hard failures (unsupported
@@ -772,6 +900,33 @@ Legend: **Y** = supported, **—** = not supported on this platform
 | Per-stage breakdown (Light / Deep / REM / Awake) | Y | Y | — |
 
 On iOS, sleep is stored as `HKCategoryType.SleepAnalysis` samples, which the plugin groups into sessions by time gaps. On Android, each `SleepSessionRecord` (with its `Stage` list) maps to one `SleepSession`.
+
+### Mindfulness
+
+| Feature | iOS | Android | Android Permission |
+|--------|-----|---------|-------------------|
+| Read / write mindfulness sessions | Y | — | `health.READ_MINDFULNESS` / `WRITE_MINDFULNESS` |
+
+iOS maps to `HKCategoryType.MindfulSession`. Android support is pending a Health Connect binding that exposes `MindfulnessSessionRecord` (calls throw `HealthException` until then).
+
+### Reproductive / Cycle tracking
+
+| `CycleEventType` | iOS | Android | Android Permission |
+|----------------|-----|---------|-------------------|
+| `MenstruationFlow` | Y | Y | `health.READ_MENSTRUATION` / `WRITE_MENSTRUATION` |
+| `OvulationTest` | Y | Y | `health.READ_OVULATION_TEST` / `WRITE_OVULATION_TEST` |
+| `SexualActivity` | Y | Y | `health.READ_SEXUAL_ACTIVITY` / `WRITE_SEXUAL_ACTIVITY` |
+| `IntermenstrualBleeding` | Y | Y | `health.READ_INTERMENSTRUAL_BLEEDING` / `WRITE_INTERMENSTRUAL_BLEEDING` |
+
+Use `RequestCyclePermissionAsync` / `ReadCycleAsync` / `WriteCycleAsync` with a `CycleEntry`. On iOS, sexual-activity protection is write-only (reads back as `Unspecified`).
+
+### Characteristics (iOS only, read-only)
+
+| Feature | iOS | Android |
+|--------|-----|---------|
+| `ReadCharacteristicsAsync` (date of birth, biological sex, blood type, skin type, wheelchair use) | Y | — |
+
+Android Health Connect has no characteristic types, so this throws `HealthException` there.
 
 ### Nutrition & Hydration
 
