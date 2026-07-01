@@ -11,7 +11,7 @@ namespace Plugin.Maui.Health.Sample.ViewModels;
 
 public partial class WorkoutsViewViewModel : BaseViewModel
 {
-	const string SeededWorkoutsKey = "seeded.workouts.v1";
+	const string SeededWorkoutsKey = "seeded.workouts.v2";
 
 	bool initialized;
 

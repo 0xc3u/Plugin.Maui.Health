@@ -235,9 +235,10 @@ partial class HealthDataProviderImplementation : IHealth
 		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 		try
 		{
-			// Include both HKObjectType.WorkoutType and HKSeriesType.WorkoutRouteType so the
-			// caller can read and write GPS routes without a separate authorization step.
-			var objects = new NSObject[] { HKObjectType.WorkoutType, HKSeriesType.WorkoutRouteType };
+			// Include the workout type, the GPS route series, and the energy/distance quantity types
+			// so callers can read and write a workout's distance and calories (stored as samples on
+			// iOS 18+) as well as its route, all from a single authorization step.
+			var objects = WorkoutObjectTypes();
 			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? new NSSet(objects) : null;
 			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? new NSSet(objects) : null;
 
@@ -932,6 +933,18 @@ partial class HealthDataProviderImplementation : IHealth
 				throw new HealthException(beginError.LocalizedDescription);
 			}
 
+			// Add distance/energy as samples so they are stored on iOS 18+ (HKWorkout's own
+			// TotalDistance/TotalEnergyBurned are deprecated and no longer persisted directly).
+			var samples = BuildWorkoutSamples(session, activityType);
+			if (samples.Length > 0)
+			{
+				var (_, addError) = await builder.AddAsync(samples).ConfigureAwait(false);
+				if (addError is not null)
+				{
+					throw new HealthException(addError.LocalizedDescription);
+				}
+			}
+
 			var (_, endError) = await builder.EndCollectionAsync(ToNSDate(session.Until)).ConfigureAwait(false);
 			if (endError is not null)
 			{
@@ -1133,10 +1146,71 @@ partial class HealthDataProviderImplementation : IHealth
 			From = ToDateTimeOffset(workout.StartDate),
 			Until = ToDateTimeOffset(workout.EndDate),
 			DurationInSeconds = workout.Duration,
-			EnergyBurnedInCalories = workout.TotalEnergyBurned?.GetDoubleValue(HKUnit.Kilocalorie),
-			TotalDistanceInMeters = workout.TotalDistance?.GetDoubleValue(HKUnit.Meter),
+			// Prefer per-workout statistics (samples); fall back to the deprecated totals for older iOS.
+			EnergyBurnedInCalories = WorkoutStatSum(workout, HKQuantityTypeIdentifier.ActiveEnergyBurned, HKUnit.Kilocalorie)
+				?? workout.TotalEnergyBurned?.GetDoubleValue(HKUnit.Kilocalorie),
+			TotalDistanceInMeters = WorkoutDistance(workout)
+				?? workout.TotalDistance?.GetDoubleValue(HKUnit.Meter),
 			Title = null,
 			Source = workout.SourceRevision?.Source?.Name,
 			Route = route,
 		};
+
+	// The workout type, GPS route series, and the energy/distance quantity types requested together.
+	static NSObject[] WorkoutObjectTypes()
+	{
+		var types = new List<NSObject> { HKObjectType.WorkoutType, HKSeriesType.WorkoutRouteType };
+		AddQuantityType(types, HKQuantityTypeIdentifier.ActiveEnergyBurned);
+		AddQuantityType(types, HKQuantityTypeIdentifier.DistanceWalkingRunning);
+		AddQuantityType(types, HKQuantityTypeIdentifier.DistanceCycling);
+		AddQuantityType(types, HKQuantityTypeIdentifier.DistanceSwimming);
+		return types.ToArray();
+
+		static void AddQuantityType(List<NSObject> list, HKQuantityTypeIdentifier id)
+		{
+			if (HKQuantityType.Create(id) is { } type)
+				list.Add(type);
+		}
+	}
+
+	// Distance + energy samples for a workout, spanning its full [From, Until] window.
+	static HKSample[] BuildWorkoutSamples(WorkoutSession session, HKWorkoutActivityType activityType)
+	{
+		var samples = new List<HKSample>();
+		NSDate start = ToNSDate(session.From), end = ToNSDate(session.Until);
+
+		if (session.EnergyBurnedInCalories is double kcal && kcal > 0 &&
+			HKQuantityType.Create(HKQuantityTypeIdentifier.ActiveEnergyBurned) is { } energyType)
+		{
+			samples.Add(HKQuantitySample.FromType(energyType, HKQuantity.FromQuantity(HKUnit.Kilocalorie, kcal), start, end));
+		}
+
+		if (session.TotalDistanceInMeters is double meters && meters > 0 &&
+			HKQuantityType.Create(DistanceIdentifierFor(activityType)) is { } distanceType)
+		{
+			samples.Add(HKQuantitySample.FromType(distanceType, HKQuantity.FromQuantity(HKUnit.Meter, meters), start, end));
+		}
+
+		return samples.ToArray();
+	}
+
+	static HKQuantityTypeIdentifier DistanceIdentifierFor(HKWorkoutActivityType activityType) => activityType switch
+	{
+		HKWorkoutActivityType.Cycling => HKQuantityTypeIdentifier.DistanceCycling,
+		HKWorkoutActivityType.Swimming => HKQuantityTypeIdentifier.DistanceSwimming,
+		_ => HKQuantityTypeIdentifier.DistanceWalkingRunning,
+	};
+
+	static double? WorkoutStatSum(HKWorkout workout, HKQuantityTypeIdentifier id, HKUnit unit)
+	{
+		if (HKQuantityType.Create(id) is not { } type)
+			return null;
+
+		return workout.GetStatistics(type)?.SumQuantity()?.GetDoubleValue(unit);
+	}
+
+	static double? WorkoutDistance(HKWorkout workout)
+		=> WorkoutStatSum(workout, HKQuantityTypeIdentifier.DistanceWalkingRunning, HKUnit.Meter)
+			?? WorkoutStatSum(workout, HKQuantityTypeIdentifier.DistanceCycling, HKUnit.Meter)
+			?? WorkoutStatSum(workout, HKQuantityTypeIdentifier.DistanceSwimming, HKUnit.Meter);
 }
