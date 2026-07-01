@@ -260,4 +260,22 @@ public interface IHealth
 	/// <summary>Writes a sleep session, including its stage segments.</summary>
 	/// <returns>True if the session was stored successfully.</returns>
 	Task<bool> WriteSleepAsync(SleepSession session, CancellationToken cancellationToken = default);
+
+	/// <summary>Requests authorization to read/write mindfulness (meditation) sessions.</summary>
+	Task<bool> RequestMindfulnessPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns the mindfulness sessions recorded in the given date range.</summary>
+	/// <remarks>iOS maps to <c>HKCategoryType.MindfulSession</c>. Not yet available on Android.</remarks>
+	Task<List<MindfulnessSession>> ReadMindfulnessAsync(DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Writes a mindfulness (meditation) session.</summary>
+	Task<bool> WriteMindfulnessAsync(MindfulnessSession session, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Reads the user's static profile characteristics (date of birth, biological sex, blood type,
+	/// Fitzpatrick skin type, wheelchair use). These are read-only and iOS-only — Android Health Connect
+	/// has no equivalent, so this throws <c>HealthException</c> there.
+	/// </summary>
+	Task<HealthCharacteristics> ReadCharacteristicsAsync(CancellationToken cancellationToken = default);
 }

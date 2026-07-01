@@ -1557,6 +1557,217 @@ partial class HealthDataProviderImplementation : IHealth
 		return await tcs.Task.ConfigureAwait(false);
 	}
 
+	public async Task<bool> RequestMindfulnessPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var type = HKCategoryType.Create(HKCategoryTypeIdentifier.MindfulSession);
+			if (type is null)
+			{
+				return false;
+			}
+
+			var set = new NSSet(type);
+			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? set : null;
+			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? set : null;
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<List<MindfulnessSession>> ReadMindfulnessAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		var tcs = new TaskCompletionSource<List<MindfulnessSession>>();
+		try
+		{
+			var type = HKCategoryType.Create(HKCategoryTypeIdentifier.MindfulSession)
+				?? throw new HealthException("MindfulSession not available");
+			var predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.None);
+			var sort = new NSSortDescriptor(HKSample.SortIdentifierStartDate, true);
+
+			HKSampleQuery query = new(type, predicate, HKSampleQuery.NoLimit, new[] { sort },
+				(HKSampleQuery _, HKSample[] results, NSError error) =>
+				{
+					try
+					{
+						if (error is not null)
+						{
+							tcs.TrySetException(new HealthException(error.LocalizedDescription));
+							return;
+						}
+
+						var list = (results ?? Array.Empty<HKSample>()).OfType<HKCategorySample>()
+							.Select(s =>
+							{
+								var f = ToDateTimeOffset(s.StartDate);
+								var u = ToDateTimeOffset(s.EndDate);
+								return new MindfulnessSession
+								{
+									From = f,
+									Until = u,
+									DurationInSeconds = (u - f).TotalSeconds,
+									Source = s.SourceRevision?.Source?.Name,
+								};
+							})
+							.OrderBy(s => s.From)
+							.ToList();
+						tcs.TrySetResult(list);
+					}
+					catch (Exception ex)
+					{
+						tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+					}
+				});
+
+			healthStore.ExecuteQuery(query);
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task.ConfigureAwait(false);
+	}
+
+	public async Task<bool> WriteMindfulnessAsync(MindfulnessSession session, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		var tcs = new TaskCompletionSource<bool>();
+		try
+		{
+			var type = HKCategoryType.Create(HKCategoryTypeIdentifier.MindfulSession)
+				?? throw new HealthException("MindfulSession not available");
+			var sample = HKCategorySample.FromType(type, (nint)0, ToNSDate(session.From), ToNSDate(session.Until));
+
+			healthStore.SaveObject(sample, (success, error) =>
+			{
+				try
+				{
+					if (error is not null)
+						tcs.TrySetException(new HealthException(error.LocalizedDescription));
+					else
+						tcs.TrySetResult(success);
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task.ConfigureAwait(false);
+	}
+
+	public async Task<HealthCharacteristics> ReadCharacteristicsAsync(CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			// Characteristic types are read-only but still require read authorization.
+			var read = new NSSet(
+				HKCharacteristicType.Create(HKCharacteristicTypeIdentifier.DateOfBirth),
+				HKCharacteristicType.Create(HKCharacteristicTypeIdentifier.BiologicalSex),
+				HKCharacteristicType.Create(HKCharacteristicTypeIdentifier.BloodType),
+				HKCharacteristicType.Create(HKCharacteristicTypeIdentifier.FitzpatrickSkinType),
+				HKCharacteristicType.Create(HKCharacteristicTypeIdentifier.WheelchairUse));
+			await healthStore.RequestAuthorizationToShareAsync(null, read).ConfigureAwait(false);
+
+			DateTimeOffset? dob = null;
+			var dobComponents = healthStore.GetDateOfBirthComponents(out var dobErr);
+			if (dobErr is null && dobComponents is not null && dobComponents.Year > 0)
+			{
+				dob = new DateTimeOffset(
+					new DateTime((int)dobComponents.Year, (int)dobComponents.Month, (int)dobComponents.Day, 0, 0, 0, DateTimeKind.Unspecified),
+					TimeSpan.Zero);
+			}
+
+			var sex = healthStore.GetBiologicalSex(out _)?.BiologicalSex;
+			var blood = healthStore.GetBloodType(out _)?.BloodType;
+			var skin = healthStore.GetFitzpatrickSkinType(out _)?.SkinType;
+			var wheelchair = healthStore.GetWheelchairUse(out _)?.WheelchairUse;
+
+			return new HealthCharacteristics
+			{
+				DateOfBirth = dob,
+				BiologicalSex = sex switch
+				{
+					HKBiologicalSex.Female => BiologicalSex.Female,
+					HKBiologicalSex.Male => BiologicalSex.Male,
+					HKBiologicalSex.Other => BiologicalSex.Other,
+					_ => BiologicalSex.NotSet,
+				},
+				BloodType = blood switch
+				{
+					HKBloodType.APositive => BloodType.APositive,
+					HKBloodType.ANegative => BloodType.ANegative,
+					HKBloodType.BPositive => BloodType.BPositive,
+					HKBloodType.BNegative => BloodType.BNegative,
+					HKBloodType.ABPositive => BloodType.ABPositive,
+					HKBloodType.ABNegative => BloodType.ABNegative,
+					HKBloodType.OPositive => BloodType.OPositive,
+					HKBloodType.ONegative => BloodType.ONegative,
+					_ => BloodType.NotSet,
+				},
+				SkinType = skin switch
+				{
+					HKFitzpatrickSkinType.I => FitzpatrickSkinType.I,
+					HKFitzpatrickSkinType.II => FitzpatrickSkinType.II,
+					HKFitzpatrickSkinType.III => FitzpatrickSkinType.III,
+					HKFitzpatrickSkinType.IV => FitzpatrickSkinType.IV,
+					HKFitzpatrickSkinType.V => FitzpatrickSkinType.V,
+					HKFitzpatrickSkinType.VI => FitzpatrickSkinType.VI,
+					_ => FitzpatrickSkinType.NotSet,
+				},
+				WheelchairUse = wheelchair switch
+				{
+					HKWheelchairUse.No => WheelchairUse.No,
+					HKWheelchairUse.Yes => WheelchairUse.Yes,
+					_ => WheelchairUse.NotSet,
+				},
+			};
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	// Group iOS category stage samples into sessions, splitting on gaps larger than an hour.
 	static List<SleepSession> GroupSleepSessions(List<SleepStageSample> samples)
 	{

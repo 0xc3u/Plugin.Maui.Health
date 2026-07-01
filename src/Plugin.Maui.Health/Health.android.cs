@@ -1253,6 +1253,20 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// Mindfulness — MindfulnessSessionRecord is a newer Health Connect record not in this binding yet.
+	public Task<bool> RequestMindfulnessPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+		=> throw new HealthException("Mindfulness sessions are not yet supported on Android in this version.");
+
+	public Task<List<MindfulnessSession>> ReadMindfulnessAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+		=> throw new HealthException("Mindfulness sessions are not yet supported on Android in this version.");
+
+	public Task<bool> WriteMindfulnessAsync(MindfulnessSession session, CancellationToken cancellationToken = default)
+		=> throw new HealthException("Mindfulness sessions are not yet supported on Android in this version.");
+
+	// Characteristics (date of birth, sex, blood type…) are an iOS/HealthKit concept; Health Connect has none.
+	public Task<HealthCharacteristics> ReadCharacteristicsAsync(CancellationToken cancellationToken = default)
+		=> throw new HealthException("Characteristics are not available on Android Health Connect.");
+
 	static SleepStage MapAndroidSleepStage(int stage)
 	{
 		if (stage == SleepSessionRecord.StageTypeAwake) return SleepStage.Awake;

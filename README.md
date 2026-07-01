@@ -361,6 +361,9 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `RequestSleepPermissionAsync(type)` | Requests read/write access to sleep data via the consent UI (iOS `SleepAnalysis`; Android `READ_SLEEP` / `WRITE_SLEEP`). |
 | `ReadSleepAsync(from, until)` | Returns the sleep sessions in the date range, each with its per-stage breakdown. |
 | `WriteSleepAsync(session)` | Writes a sleep session, including its stage segments, to the health store. |
+| `RequestMindfulnessPermissionAsync(type)` | Requests read/write access to mindfulness sessions (iOS `MindfulSession`; Android pending). |
+| `ReadMindfulnessAsync(from, until)` / `WriteMindfulnessAsync(session)` | Reads/writes mindfulness (meditation) sessions. iOS only for now. |
+| `ReadCharacteristicsAsync()` | Reads the user's static profile (date of birth, biological sex, blood type, skin type, wheelchair use). iOS only (read-only). |
 
 All async methods accept an optional `CancellationToken` as the last parameter.
 

@@ -158,8 +158,12 @@ aggregation API.
 ### Tier 3 — differentiating
 - [ ] Background/observer + change-based sync (+ Android background/history permissions & feature gating).
 - [ ] Reproductive / cycle tracking (cross-platform).
-- [ ] Mindfulness (cross-platform).
-- [ ] iOS characteristics; blood-pressure & meal correlations.
+- [~] Mindfulness — `RequestMindfulnessPermissionAsync` / `ReadMindfulnessAsync` / `WriteMindfulnessAsync`.
+      *(iOS `MindfulSession` implemented; Android throws pending a newer Health Connect binding that
+      exposes `MindfulnessSessionRecord`.)*
+- [~] iOS characteristics — `ReadCharacteristicsAsync` (DOB, biological sex, blood type, skin type,
+      wheelchair use). *(iOS done; Android has no equivalent and throws.)* Blood-pressure & meal
+      correlations still pending.
 
 ### Tier 4 — specialised / optional
 - [ ] ECG, audiogram, heartbeat series (iOS); activity rings / intensity; state of mind; symptoms;
