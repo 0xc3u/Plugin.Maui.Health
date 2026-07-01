@@ -171,4 +171,30 @@ public interface IHealth
 	/// <summary>Writes a workout session, including its GPS route if provided.</summary>
 	/// <returns>True if the session was stored successfully.</returns>
 	Task<bool> WriteWorkoutAsync(WorkoutSession session, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Requests authorization to read and/or write sleep data by presenting the platform's consent UI,
+	/// then reports whether the permission ends up granted.
+	/// </summary>
+	/// <remarks>
+	/// On iOS this authorizes the <c>HKCategoryType.SleepAnalysis</c> type. On Android it requests the
+	/// <c>READ_SLEEP</c> / <c>WRITE_SLEEP</c> Health Connect permissions (launching the consent UI when
+	/// not already granted, then re-checking).
+	/// </remarks>
+	/// <returns>True if the required sleep permissions are granted after the request completes.</returns>
+	Task<bool> RequestSleepPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Returns the sleep sessions recorded in the given date range, each with its stage breakdown.
+	/// </summary>
+	/// <remarks>
+	/// On Android each Health Connect <c>SleepSessionRecord</c> maps to one <see cref="SleepSession"/>.
+	/// On iOS the individual <c>SleepAnalysis</c> category samples are grouped into sessions by time gaps.
+	/// </remarks>
+	Task<List<SleepSession>> ReadSleepAsync(DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Writes a sleep session, including its stage segments.</summary>
+	/// <returns>True if the session was stored successfully.</returns>
+	Task<bool> WriteSleepAsync(SleepSession session, CancellationToken cancellationToken = default);
 }

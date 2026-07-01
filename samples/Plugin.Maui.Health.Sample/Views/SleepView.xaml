@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
+             x:Class="Plugin.Maui.Health.Sample.Views.SleepView"
+             x:DataType="vm:SleepViewViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
+             Title="Sleep">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+
+            <!-- Summary + stage timeline -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Asleep" Style="{StaticResource MetricCaption}" />
+                            <Label Text="{Binding AsleepText}" Style="{StaticResource MetricValue}" />
+                            <Label Text="{Binding InBedText}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="{Binding SleepDateText}" Style="{StaticResource MutedLabel}" VerticalOptions="Start" />
+                    </Grid>
+                    <charts:SleepStagesView Stages="{Binding Stages}" />
+                    <!-- Legend -->
+                    <HorizontalStackLayout Spacing="14" HorizontalOptions="Center">
+                        <HorizontalStackLayout Spacing="5">
+                            <BoxView WidthRequest="12" HeightRequest="12" CornerRadius="3" Color="{StaticResource AccentViolet}" VerticalOptions="Center" />
+                            <Label Text="Deep" Style="{StaticResource MutedLabel}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="5">
+                            <BoxView WidthRequest="12" HeightRequest="12" CornerRadius="3" Color="{StaticResource AccentBlue}" VerticalOptions="Center" />
+                            <Label Text="Light" Style="{StaticResource MutedLabel}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="5">
+                            <BoxView WidthRequest="12" HeightRequest="12" CornerRadius="3" Color="{StaticResource AccentCyan}" VerticalOptions="Center" />
+                            <Label Text="REM" Style="{StaticResource MutedLabel}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="5">
+                            <BoxView WidthRequest="12" HeightRequest="12" CornerRadius="3" Color="{StaticResource AccentAmber}" VerticalOptions="Center" />
+                            <Label Text="Awake" Style="{StaticResource MutedLabel}" />
+                        </HorizontalStackLayout>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Per-stage breakdown -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Deep" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding DeepMinutes, StringFormat='{0:F0} min'}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource AccentViolet}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="REM" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding RemMinutes, StringFormat='{0:F0} min'}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource AccentCyan}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Light" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding LightMinutes, StringFormat='{0:F0} min'}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource AccentBlue}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Awake" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding AwakeMinutes, StringFormat='{0:F0} min'}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource AccentAmber}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

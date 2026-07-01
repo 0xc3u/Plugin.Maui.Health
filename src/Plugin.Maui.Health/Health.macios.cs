@@ -1139,6 +1139,209 @@ partial class HealthDataProviderImplementation : IHealth
 		return WorkoutType.Other;
 	}
 
+	// ── Sleep methods ─────────────────────────────────────────────────────────
+
+	public async Task<bool> RequestSleepPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var sleepType = HKCategoryType.Create(HKCategoryTypeIdentifier.SleepAnalysis);
+			if (sleepType is null)
+			{
+				return false;
+			}
+
+			var set = new NSSet(sleepType);
+			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? set : null;
+			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? set : null;
+
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<List<SleepSession>> ReadSleepAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		var tcs = new TaskCompletionSource<List<SleepSession>>();
+
+		try
+		{
+			var sleepType = HKCategoryType.Create(HKCategoryTypeIdentifier.SleepAnalysis)
+				?? throw new HealthException("SleepAnalysis not available");
+			NSPredicate predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.None);
+			var sort = new NSSortDescriptor(HKSample.SortIdentifierStartDate, true);
+
+			HKSampleQuery query = new(sleepType, predicate, HKSampleQuery.NoLimit, new[] { sort },
+				(HKSampleQuery _, HKSample[] results, NSError error) =>
+				{
+					try
+					{
+						if (error is not null)
+						{
+							tcs.TrySetException(new HealthException(error.LocalizedDescription));
+							return;
+						}
+
+						var stages = (results ?? Array.Empty<HKSample>()).OfType<HKCategorySample>()
+							.Select(s => new SleepStageSample
+							{
+								From = ToDateTimeOffset(s.StartDate),
+								Until = ToDateTimeOffset(s.EndDate),
+								Stage = MapHKSleepStage((HKCategoryValueSleepAnalysis)(long)s.Value),
+							})
+							.OrderBy(s => s.From)
+							.ToList();
+
+						tcs.TrySetResult(GroupSleepSessions(stages));
+					}
+					catch (Exception ex)
+					{
+						tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+					}
+				});
+
+			healthStore.ExecuteQuery(query);
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task.ConfigureAwait(false);
+	}
+
+	public async Task<bool> WriteSleepAsync(SleepSession session, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		var tcs = new TaskCompletionSource<bool>();
+
+		try
+		{
+			var sleepType = HKCategoryType.Create(HKCategoryTypeIdentifier.SleepAnalysis)
+				?? throw new HealthException("SleepAnalysis not available");
+
+			var objects = session.Stages
+				.Select(s => (HKObject)HKCategorySample.FromType(
+					sleepType, (nint)(int)MapToHKSleepStage(s.Stage), ToNSDate(s.From), ToNSDate(s.Until)))
+				.ToArray();
+
+			if (objects.Length == 0)
+			{
+				tcs.TrySetResult(true);
+			}
+			else
+			{
+				healthStore.SaveObjects(objects, (success, error) =>
+				{
+					try
+					{
+						if (error is not null)
+							tcs.TrySetException(new HealthException(error.LocalizedDescription));
+						else
+							tcs.TrySetResult(success);
+					}
+					catch (Exception ex)
+					{
+						tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+					}
+				});
+			}
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task.ConfigureAwait(false);
+	}
+
+	// Group iOS category stage samples into sessions, splitting on gaps larger than an hour.
+	static List<SleepSession> GroupSleepSessions(List<SleepStageSample> samples)
+	{
+		var sessions = new List<SleepSession>();
+		if (samples.Count == 0)
+			return sessions;
+
+		var gap = TimeSpan.FromMinutes(60);
+		var current = new List<SleepStageSample>();
+		DateTimeOffset sessionEnd = default;
+
+		foreach (var s in samples)
+		{
+			if (current.Count > 0 && s.From - sessionEnd > gap)
+			{
+				sessions.Add(BuildSleepSession(current));
+				current = new List<SleepStageSample>();
+			}
+
+			current.Add(s);
+			sessionEnd = current.Count == 1 || s.Until > sessionEnd ? s.Until : sessionEnd;
+		}
+
+		if (current.Count > 0)
+			sessions.Add(BuildSleepSession(current));
+
+		return sessions;
+	}
+
+	static SleepSession BuildSleepSession(List<SleepStageSample> stages)
+	{
+		var from = stages.Min(s => s.From);
+		var until = stages.Max(s => s.Until);
+		return new SleepSession
+		{
+			From = from,
+			Until = until,
+			DurationInSeconds = (until - from).TotalSeconds,
+			Stages = stages,
+		};
+	}
+
+	static SleepStage MapHKSleepStage(HKCategoryValueSleepAnalysis value) => value switch
+	{
+		HKCategoryValueSleepAnalysis.InBed => SleepStage.InBed,
+		HKCategoryValueSleepAnalysis.Asleep => SleepStage.Sleeping,
+		HKCategoryValueSleepAnalysis.Awake => SleepStage.Awake,
+		HKCategoryValueSleepAnalysis.AsleepCore => SleepStage.Light,
+		HKCategoryValueSleepAnalysis.AsleepDeep => SleepStage.Deep,
+		HKCategoryValueSleepAnalysis.AsleepREM => SleepStage.Rem,
+		_ => SleepStage.Unknown,
+	};
+
+	static HKCategoryValueSleepAnalysis MapToHKSleepStage(SleepStage stage) => stage switch
+	{
+		SleepStage.InBed => HKCategoryValueSleepAnalysis.InBed,
+		SleepStage.Sleeping => HKCategoryValueSleepAnalysis.Asleep,
+		SleepStage.Awake => HKCategoryValueSleepAnalysis.Awake,
+		SleepStage.Light => HKCategoryValueSleepAnalysis.AsleepCore,
+		SleepStage.Deep => HKCategoryValueSleepAnalysis.AsleepDeep,
+		SleepStage.Rem => HKCategoryValueSleepAnalysis.AsleepREM,
+		_ => HKCategoryValueSleepAnalysis.InBed,
+	};
+
 	WorkoutSession MapHKWorkout(HKWorkout workout, IReadOnlyList<RoutePoint> route) =>
 		new()
 		{

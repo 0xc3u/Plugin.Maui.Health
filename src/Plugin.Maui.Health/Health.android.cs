@@ -920,6 +920,158 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// ── Sleep methods ─────────────────────────────────────────────────────────
+
+	public async Task<bool> RequestSleepPermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+	{
+		const string readPerm = "android.permission.health.READ_SLEEP";
+		const string writePerm = "android.permission.health.WRITE_SLEEP";
+
+		var required = new HashSet<string>();
+		var permissions = new Java.Util.HashSet();
+		if (permissionType.HasFlag(PermissionType.Read)) { required.Add(readPerm); permissions.Add(new Java.Lang.String(readPerm)); }
+		if (permissionType.HasFlag(PermissionType.Write)) { required.Add(writePerm); permissions.Add(new Java.Lang.String(writePerm)); }
+
+		if (required.Count == 0)
+		{
+			return true;
+		}
+
+		if (await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false))
+		{
+			return true;
+		}
+
+		await RequestFromHealthConnectAsync(permissions, cancellationToken).ConfigureAwait(false);
+
+		return await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false);
+	}
+
+	public async Task<List<SleepSession>> ReadSleepAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var timeFilter = TimeRangeFilter.Between(from.ToInstant(), until.ToInstant());
+			var klass = GetKClass<SleepSessionRecord>();
+			var request = new ReadRecordsRequest(klass, timeFilter, new List<DataOrigin>(), true, 1000, null);
+
+			var respObj = await InvokeCoroutine(c => client.ReadRecords(request, c)).ConfigureAwait(false);
+			var response = (ReadRecordsResponse)respObj!;
+
+			var result = new List<SleepSession>();
+			foreach (var raw in response.Records)
+			{
+				if (raw is not SleepSessionRecord record)
+				{
+					continue;
+				}
+
+				var stages = new List<SleepStageSample>();
+				foreach (var stageObj in record.Stages)
+				{
+					if (stageObj is SleepSessionRecord.Stage stage)
+					{
+						stages.Add(new SleepStageSample
+						{
+							From = stage.StartTime.ToDateTimeUtc(),
+							Until = stage.EndTime.ToDateTimeUtc(),
+							Stage = MapAndroidSleepStage(stage.GetStage()),
+						});
+					}
+				}
+
+				var f = record.StartTime.ToDateTimeUtc();
+				var u = record.EndTime.ToDateTimeUtc();
+				result.Add(new SleepSession
+				{
+					From = f,
+					Until = u,
+					DurationInSeconds = (u - f).TotalSeconds,
+					Source = record.Metadata?.DataOrigin?.PackageName,
+					Stages = stages,
+				});
+			}
+
+			return result;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<bool> WriteSleepAsync(SleepSession session, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+
+			var stages = new List<SleepSessionRecord.Stage>();
+			foreach (var s in session.Stages)
+			{
+				stages.Add(new SleepSessionRecord.Stage(s.From.ToInstant(), s.Until.ToInstant(), MapToAndroidSleepStage(s.Stage)));
+			}
+
+			var record = new SleepSessionRecord(
+				session.From.ToInstant(), null,
+				session.Until.ToInstant(), null,
+				Metadata.ManualEntry(),
+				title: null,
+				notes: null,
+				stages);
+
+			await InvokeCoroutine(c => client.InsertRecords(
+				new[] { Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)! }, c)).ConfigureAwait(false);
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	static SleepStage MapAndroidSleepStage(int stage)
+	{
+		if (stage == SleepSessionRecord.StageTypeAwake) return SleepStage.Awake;
+		if (stage == SleepSessionRecord.StageTypeAwakeInBed) return SleepStage.InBed;
+		if (stage == SleepSessionRecord.StageTypeOutOfBed) return SleepStage.Awake;
+		if (stage == SleepSessionRecord.StageTypeSleeping) return SleepStage.Sleeping;
+		if (stage == SleepSessionRecord.StageTypeLight) return SleepStage.Light;
+		if (stage == SleepSessionRecord.StageTypeDeep) return SleepStage.Deep;
+		if (stage == SleepSessionRecord.StageTypeRem) return SleepStage.Rem;
+		return SleepStage.Unknown;
+	}
+
+	static int MapToAndroidSleepStage(SleepStage stage) => stage switch
+	{
+		SleepStage.Awake => SleepSessionRecord.StageTypeAwake,
+		SleepStage.InBed => SleepSessionRecord.StageTypeAwakeInBed,
+		SleepStage.Sleeping => SleepSessionRecord.StageTypeSleeping,
+		SleepStage.Light => SleepSessionRecord.StageTypeLight,
+		SleepStage.Deep => SleepSessionRecord.StageTypeDeep,
+		SleepStage.Rem => SleepSessionRecord.StageTypeRem,
+		_ => SleepSessionRecord.StageTypeUnknown,
+	};
+
 	// ── Private helpers ───────────────────────────────────────────────────────
 
 	async Task<List<Sample>> ReadAllInternalAsync(
