@@ -10,7 +10,7 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="16">
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 
             <!-- Summary: BMI ring + key stats -->
             <Border Style="{StaticResource Card}">

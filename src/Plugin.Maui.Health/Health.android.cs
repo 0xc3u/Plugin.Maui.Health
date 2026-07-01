@@ -241,6 +241,81 @@ partial class HealthDataProviderImplementation : IHealth
 		return await CheckPermissionAsync(healthParameter, permissionType, cancellationToken).ConfigureAwait(false);
 	}
 
+	// ── RequestPermissionsAsync (batched) ─────────────────────────────────────
+
+	public async Task<bool> RequestPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default)
+	{
+		var required = new HashSet<string>();
+		var permissions = new Java.Util.HashSet();
+
+		foreach (var (parameter, permissionType) in requests)
+		{
+			var (readPerm, writePerm) = GetPermissions(parameter);
+			if (permissionType.HasFlag(PermissionType.Read) && readPerm is not null)
+			{
+				required.Add(readPerm);
+				permissions.Add(new Java.Lang.String(readPerm));
+			}
+			if (permissionType.HasFlag(PermissionType.Write) && writePerm is not null)
+			{
+				required.Add(writePerm);
+				permissions.Add(new Java.Lang.String(writePerm));
+			}
+		}
+
+		if (required.Count == 0)
+		{
+			return true; // nothing supported on Android in this set
+		}
+
+		if (await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false))
+		{
+			return true;
+		}
+
+		await RequestFromHealthConnectAsync(permissions, cancellationToken).ConfigureAwait(false);
+
+		return await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false);
+	}
+
+	async Task<bool> AreAllGrantedAsync(HashSet<string> required, CancellationToken cancellationToken)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var grantedRaw = await InvokeCoroutine(
+				c => client.PermissionController.GetGrantedPermissions(c)).ConfigureAwait(false);
+
+			var granted = new HashSet<string>();
+			if (grantedRaw is Java.Lang.Object rawObj)
+			{
+				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.AbstractCollection>(rawObj)?.Iterator();
+				if (iter != null)
+				{
+					while (iter.HasNext)
+						granted.Add(iter.Next()?.ToString() ?? "");
+				}
+			}
+
+			return required.All(granted.Contains);
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	// ── RequestWorkoutPermissionAsync ─────────────────────────────────────────
 
 	public async Task<bool> RequestWorkoutPermissionAsync(PermissionType permissionType,

@@ -10,7 +10,7 @@
     <ScrollView>
         <VerticalStackLayout Spacing="16" Padding="16">
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 
             <!-- Overview: % of reference daily intake -->
             <Border Style="{StaticResource Card}">

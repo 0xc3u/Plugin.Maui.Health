@@ -60,7 +60,7 @@
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 
         </VerticalStackLayout>
     </ScrollView>

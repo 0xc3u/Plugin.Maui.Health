@@ -43,6 +43,8 @@ public partial class VitaminsViewViewModel : BaseViewModel
 
 	const string SeededVitaminsKey = "seeded.vitamins";
 
+	bool initialized;
+
 	static readonly (HealthParameter Param, double Mg)[] DemoVitamins =
 	{
 		(HealthParameter.DietaryVitaminC, 82d),
@@ -63,29 +65,15 @@ public partial class VitaminsViewViewModel : BaseViewModel
 	/// <summary>Writes showcase vitamin intake into the health store once, then loads the real values back.</summary>
 	public async Task InitializeAsync()
 	{
-		if (!Health.IsSupported)
-			return; // keep demo data
+		if (initialized)
+			return;
+		initialized = true;
 
-		try
+		await RunInitializeAsync(async () =>
 		{
-			IsBusy = true;
-
-			// All dietary vitamins share the NUTRITION permission, so one request covers them.
-			var granted = await Health.RequestPermissionAsync(HealthParameter.DietaryVitaminC, PermissionType.Read | PermissionType.Write);
-			if (!granted)
-				return; // keep demo data
-
 			await SeedVitaminsOnceAsync();
 			await LoadVitaminsAsync();
-		}
-		catch (HealthException)
-		{
-			// Leave demo data in place.
-		}
-		finally
-		{
-			IsBusy = false;
-		}
+		});
 	}
 
 	async Task SeedVitaminsOnceAsync()

@@ -299,6 +299,59 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	public async Task<bool> RequestPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		var readTypes = new List<HKObjectType>();
+		var writeTypes = new List<HKSampleType>();
+
+		foreach (var (parameter, permissionType) in requests)
+		{
+			// Skip parameters this platform doesn't know rather than failing the whole batch.
+			if (!healthParameterMapping.TryGetValue(parameter, out var id))
+				continue;
+
+			var type = HKQuantityType.Create(id);
+			if (type is null)
+				continue;
+
+			if (permissionType.HasFlag(PermissionType.Read))
+				readTypes.Add(type);
+			if (permissionType.HasFlag(PermissionType.Write))
+				writeTypes.Add(type);
+		}
+
+		if (readTypes.Count == 0 && writeTypes.Count == 0)
+		{
+			return true;
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			NSSet? typesToRead = readTypes.Count > 0 ? new NSSet(readTypes.ToArray()) : null;
+			NSSet? typesToWrite = writeTypes.Count > 0 ? new NSSet(writeTypes.ToArray()) : null;
+
+			// A single authorization request → a single sheet (presenting several in a row can hang).
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	public Task<bool> RequestWorkoutPermissionAsync(PermissionType permissionType,
 		CancellationToken cancellationToken = default)
 		// On iOS, requesting and checking workout authorization are the same HealthKit operation.

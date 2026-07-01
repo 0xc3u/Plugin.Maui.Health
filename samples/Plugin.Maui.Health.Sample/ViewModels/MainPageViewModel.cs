@@ -170,6 +170,8 @@ public partial class MainPageViewModel : BaseViewModel
 	const string SeededStepsKey = "seeded.steps";
 	static readonly int[] DemoSteps = { 6400, 9100, 7300, 11200, 8400, 5200, 8432 };
 
+	bool initialized;
+
 	public override void OnAppearing(object param)
 	{
 		MenuItems = new ObservableCollection<Models.MenuItem>
@@ -185,33 +187,23 @@ public partial class MainPageViewModel : BaseViewModel
 	/// <summary>Writes showcase steps into the health store once, then loads the real values back.</summary>
 	async Task InitializeAsync()
 	{
-		if (!Health.IsSupported)
-			return; // keep the in-memory demo data
+		if (initialized)
+			return; // run once; OnAppearing can fire repeatedly
+		initialized = true;
 
-		try
+		await RunInitializeAsync(async () =>
 		{
-			IsBusy = true;
-
-			var granted = await Health.RequestPermissionAsync(HealthParameter.StepCount, PermissionType.Read | PermissionType.Write);
-			if (!granted)
-				return; // keep demo data
-
 			await SeedStepsOnceAsync();
 			await LoadStepsAsync();
-		}
-		catch (HealthException)
-		{
-			// Leave the demo data in place; the error was surfaced as a clear HealthException.
-		}
-		finally
-		{
-			IsBusy = false;
-		}
+		});
 	}
 
 	async Task SeedStepsOnceAsync()
 	{
-		if (Preferences.Get(SeededStepsKey, false))
+		// Key by day so "today" always gets seeded (and the dashboard never shows an empty day after
+		// the clock rolls over), while avoiding re-seeding repeatedly within the same day.
+		var key = $"{SeededStepsKey}.{DateTime.Now:yyyyMMdd}";
+		if (Preferences.Get(key, false))
 			return;
 
 		for (int i = 0; i < DemoSteps.Length; i++)
@@ -220,7 +212,7 @@ public partial class MainPageViewModel : BaseViewModel
 			await Health.WriteAsync(HealthParameter.StepCount, day, DemoSteps[i], Units.Others.Count);
 		}
 
-		Preferences.Set(SeededStepsKey, true);
+		Preferences.Set(key, true);
 	}
 
 	async Task LoadStepsAsync()

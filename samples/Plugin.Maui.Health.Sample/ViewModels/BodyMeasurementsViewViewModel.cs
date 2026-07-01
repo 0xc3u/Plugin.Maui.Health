@@ -42,6 +42,8 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	const string SeededWeightKey = "seeded.weight";
 	static readonly double[] DemoWeights = { 74.1, 73.6, 73.8, 73.1, 72.9, 72.4, 72.6, 72.5 };
 
+	bool initialized;
+
 	public BodyMeasurementsViewViewModel(IHealth health, INavigationService navigationService) : base(health, navigationService)
 	{
 		ShowDemoData();
@@ -50,29 +52,15 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 	/// <summary>Writes showcase body data into the health store once, then loads the real values back.</summary>
 	public async Task InitializeAsync()
 	{
-		if (!Health.IsSupported)
-			return; // keep demo data
+		if (initialized)
+			return;
+		initialized = true;
 
-		try
+		await RunInitializeAsync(async () =>
 		{
-			IsBusy = true;
-
-			var granted = await Health.RequestPermissionAsync(HealthParameter.BodyMass, PermissionType.Read | PermissionType.Write);
-			await Health.RequestPermissionAsync(HealthParameter.Height, PermissionType.Read | PermissionType.Write);
-			if (!granted)
-				return; // keep demo data
-
 			await SeedBodyOnceAsync();
 			await LoadBodyAsync();
-		}
-		catch (HealthException)
-		{
-			// Leave demo data in place.
-		}
-		finally
-		{
-			IsBusy = false;
-		}
+		});
 	}
 
 	async Task SeedBodyOnceAsync()
@@ -170,12 +158,8 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 			{
 				await Health.WriteAsync(HealthParameter.BodyMass, DateTimeOffset.Now, NewBodyMass, Units.Mass.Kilograms);
 
-				var hasBmiPermission = await EnsurePermissionAsync(HealthParameter.BodyMassIndex, PermissionType.Read | PermissionType.Write);
-				if (hasBmiPermission)
-				{
-					var newBodyMassIndex = CalculateBodyMassIndex(NewBodyMass, Height);
-					await Health.WriteAsync(HealthParameter.BodyMassIndex, DateTimeOffset.Now, newBodyMassIndex, Units.Others.Count);
-				}
+				BodyMass = NewBodyMass;
+				SetBmi(ComputeBmi(BodyMass, Height)); // BMI is derived, not a Health Connect record type
 			}
 			else
 			{
@@ -274,17 +258,5 @@ public partial class BodyMeasurementsViewViewModel : BaseViewModel
 		{
 			IsBusy = false;
 		}
-	}
-
-	double CalculateBodyMassIndex(double height, double bodyMass)
-	{
-		double bodyMassIndex = 0;
-
-		if (height > 0 && bodyMass >0)
-		{
-			bodyMassIndex = bodyMass / Math.Pow(height/ 100, 2);
-		}
-
-		return bodyMassIndex;
 	}
 }

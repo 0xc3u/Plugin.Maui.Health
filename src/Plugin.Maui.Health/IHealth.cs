@@ -42,6 +42,25 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Requests authorization for several parameters in a single consent prompt and reports whether all
+	/// of them end up granted. Prefer this over multiple <see cref="RequestPermissionAsync"/> calls:
+	/// requesting permissions one-by-one shows several consecutive prompts, and on iOS presenting more
+	/// than one HealthKit authorization sheet in quick succession can hang the app.
+	/// </summary>
+	/// <param name="requests">The parameters and the read/write access requested for each.</param>
+	/// <returns>True if every requested permission is granted after the prompt completes.</returns>
+	/// <remarks>
+	/// On iOS this maps to a single <c>HKHealthStore.RequestAuthorizationToShareAsync</c> call (one
+	/// sheet); read grants aren't revealed by HealthKit, so read requests count as granted once the
+	/// sheet is shown. On Android the Health Connect consent UI is launched once for the combined set
+	/// of permissions (and skipped entirely if they are already granted). Parameters not supported by a
+	/// platform are ignored rather than failing the whole request.
+	/// </remarks>
+	Task<bool> RequestPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Returns the cumulative sum of <paramref name="healthParameter"/> over the specified date range.
 	/// Only meaningful for inherently cumulative parameters (steps, distance, energy, floors).
 	/// </summary>
