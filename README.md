@@ -364,6 +364,8 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `RequestMindfulnessPermissionAsync(type)` | Requests read/write access to mindfulness sessions (iOS `MindfulSession`; Android pending). |
 | `ReadMindfulnessAsync(from, until)` / `WriteMindfulnessAsync(session)` | Reads/writes mindfulness (meditation) sessions. iOS only for now. |
 | `ReadCharacteristicsAsync()` | Reads the user's static profile (date of birth, biological sex, blood type, skin type, wheelchair use). iOS only (read-only). |
+| `RequestCyclePermissionAsync(type)` | Requests read/write access to menstrual-cycle data (flow, ovulation, sexual activity, intermenstrual bleeding). |
+| `ReadCycleAsync(from, until)` / `WriteCycleAsync(entry)` | Reads/writes menstrual-cycle entries across all cycle event types. |
 
 All async methods accept an optional `CancellationToken` as the last parameter.
 

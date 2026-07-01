@@ -278,4 +278,17 @@ public interface IHealth
 	/// has no equivalent, so this throws <c>HealthException</c> there.
 	/// </summary>
 	Task<HealthCharacteristics> ReadCharacteristicsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Requests authorization to read/write menstrual-cycle / reproductive-health data (menstruation
+	/// flow, ovulation tests, sexual activity, intermenstrual bleeding) in a single prompt.
+	/// </summary>
+	Task<bool> RequestCyclePermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns all menstrual-cycle entries in the date range, across every cycle event type.</summary>
+	Task<List<CycleEntry>> ReadCycleAsync(DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Writes a single menstrual-cycle entry (its value field is chosen by <c>CycleEntry.Type</c>).</summary>
+	Task<bool> WriteCycleAsync(CycleEntry entry, CancellationToken cancellationToken = default);
 }

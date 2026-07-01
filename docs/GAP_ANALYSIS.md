@@ -157,7 +157,10 @@ aggregation API.
 
 ### Tier 3 — differentiating
 - [ ] Background/observer + change-based sync (+ Android background/history permissions & feature gating).
-- [ ] Reproductive / cycle tracking (cross-platform).
+- [x] Reproductive / cycle tracking — `RequestCyclePermissionAsync` / `ReadCycleAsync` / `WriteCycleAsync`
+      with a unified `CycleEntry` (menstruation flow, ovulation test, sexual activity, intermenstrual
+      bleeding). *(Cross-platform; all four types verified write→read on the emulator. iOS reads sexual-
+      activity protection as Unspecified — a metadata-read limitation.)*
 - [~] Mindfulness — `RequestMindfulnessPermissionAsync` / `ReadMindfulnessAsync` / `WriteMindfulnessAsync`.
       *(iOS `MindfulSession` implemented; Android throws pending a newer Health Connect binding that
       exposes `MindfulnessSessionRecord`.)*

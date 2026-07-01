@@ -1768,6 +1768,217 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	static readonly HKCategoryTypeIdentifier[] CycleTypeIds =
+	{
+		HKCategoryTypeIdentifier.MenstrualFlow,
+		HKCategoryTypeIdentifier.OvulationTestResult,
+		HKCategoryTypeIdentifier.SexualActivity,
+		HKCategoryTypeIdentifier.IntermenstrualBleeding,
+	};
+
+	public async Task<bool> RequestCyclePermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var types = CycleTypeIds.Select(id => (HKObjectType)HKCategoryType.Create(id)!).Where(t => t is not null).ToArray();
+			var set = new NSSet(types);
+			NSSet? typesToRead = permissionType.HasFlag(PermissionType.Read) ? set : null;
+			NSSet? typesToWrite = permissionType.HasFlag(PermissionType.Write) ? set : null;
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<List<CycleEntry>> ReadCycleAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var entries = new List<CycleEntry>();
+
+			var menstrual = HKCategoryType.Create(HKCategoryTypeIdentifier.MenstrualFlow);
+			if (menstrual is not null)
+			{
+				foreach (var s in await QueryCategoryAsync(menstrual, from, until).ConfigureAwait(false))
+					entries.Add(new CycleEntry
+					{
+						Time = ToDateTimeOffset(s.StartDate),
+						Type = CycleEventType.MenstruationFlow,
+						Flow = MapHKFlow((HKCategoryValueMenstrualFlow)(long)s.Value),
+						Source = s.SourceRevision?.Source?.Name,
+					});
+			}
+
+			var ovulation = HKCategoryType.Create(HKCategoryTypeIdentifier.OvulationTestResult);
+			if (ovulation is not null)
+			{
+				foreach (var s in await QueryCategoryAsync(ovulation, from, until).ConfigureAwait(false))
+					entries.Add(new CycleEntry
+					{
+						Time = ToDateTimeOffset(s.StartDate),
+						Type = CycleEventType.OvulationTest,
+						OvulationResult = MapHKOvulation((HKCategoryValueOvulationTestResult)(long)s.Value),
+						Source = s.SourceRevision?.Source?.Name,
+					});
+			}
+
+			var sexual = HKCategoryType.Create(HKCategoryTypeIdentifier.SexualActivity);
+			if (sexual is not null)
+			{
+				foreach (var s in await QueryCategoryAsync(sexual, from, until).ConfigureAwait(false))
+					entries.Add(new CycleEntry
+					{
+						Time = ToDateTimeOffset(s.StartDate),
+						Type = CycleEventType.SexualActivity,
+						Source = s.SourceRevision?.Source?.Name,
+					});
+			}
+
+			var inter = HKCategoryType.Create(HKCategoryTypeIdentifier.IntermenstrualBleeding);
+			if (inter is not null)
+			{
+				foreach (var s in await QueryCategoryAsync(inter, from, until).ConfigureAwait(false))
+					entries.Add(new CycleEntry
+					{
+						Time = ToDateTimeOffset(s.StartDate),
+						Type = CycleEventType.IntermenstrualBleeding,
+						Source = s.SourceRevision?.Source?.Name,
+					});
+			}
+
+			return entries.OrderBy(e => e.Time).ToList();
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<bool> WriteCycleAsync(CycleEntry entry, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		var tcs = new TaskCompletionSource<bool>();
+		try
+		{
+			var date = ToNSDate(entry.Time);
+			HKCategorySample sample = entry.Type switch
+			{
+				CycleEventType.MenstruationFlow => HKCategorySample.FromType(
+					HKCategoryType.Create(HKCategoryTypeIdentifier.MenstrualFlow)!, (nint)MapToHKFlow(entry.Flow), date, date),
+				CycleEventType.OvulationTest => HKCategorySample.FromType(
+					HKCategoryType.Create(HKCategoryTypeIdentifier.OvulationTestResult)!, (nint)MapToHKOvulation(entry.OvulationResult), date, date),
+				CycleEventType.SexualActivity => HKCategorySample.FromType(
+					HKCategoryType.Create(HKCategoryTypeIdentifier.SexualActivity)!, (nint)0, date, date,
+					new NSDictionary(HKMetadataKey.SexualActivityProtectionUsed,
+						NSNumber.FromBoolean(entry.Protection == SexualActivityProtection.Protected))),
+				CycleEventType.IntermenstrualBleeding => HKCategorySample.FromType(
+					HKCategoryType.Create(HKCategoryTypeIdentifier.IntermenstrualBleeding)!, (nint)0, date, date),
+				_ => throw new HealthException($"Unsupported cycle event: {entry.Type}"),
+			};
+
+			healthStore.SaveObject(sample, (success, error) =>
+			{
+				try
+				{
+					if (error is not null)
+						tcs.TrySetException(new HealthException(error.LocalizedDescription));
+					else
+						tcs.TrySetResult(success);
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+
+		return await tcs.Task.ConfigureAwait(false);
+	}
+
+	Task<HKCategorySample[]> QueryCategoryAsync(HKCategoryType type, DateTimeOffset from, DateTimeOffset until)
+	{
+		var tcs = new TaskCompletionSource<HKCategorySample[]>();
+		var predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.None);
+		var sort = new NSSortDescriptor(HKSample.SortIdentifierStartDate, true);
+		var query = new HKSampleQuery(type, predicate, HKSampleQuery.NoLimit, new[] { sort },
+			(HKSampleQuery _, HKSample[] results, NSError error) =>
+			{
+				try
+				{
+					if (error is not null)
+						tcs.TrySetException(new HealthException(error.LocalizedDescription));
+					else
+						tcs.TrySetResult((results ?? Array.Empty<HKSample>()).OfType<HKCategorySample>().ToArray());
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+		healthStore.ExecuteQuery(query);
+		return tcs.Task;
+	}
+
+	static MenstruationFlow MapHKFlow(HKCategoryValueMenstrualFlow v) => v switch
+	{
+		HKCategoryValueMenstrualFlow.Light => MenstruationFlow.Light,
+		HKCategoryValueMenstrualFlow.Medium => MenstruationFlow.Medium,
+		HKCategoryValueMenstrualFlow.Heavy => MenstruationFlow.Heavy,
+		HKCategoryValueMenstrualFlow.None => MenstruationFlow.None,
+		_ => MenstruationFlow.Unspecified,
+	};
+
+	static long MapToHKFlow(MenstruationFlow f) => (long)(f switch
+	{
+		MenstruationFlow.Light => HKCategoryValueMenstrualFlow.Light,
+		MenstruationFlow.Medium => HKCategoryValueMenstrualFlow.Medium,
+		MenstruationFlow.Heavy => HKCategoryValueMenstrualFlow.Heavy,
+		MenstruationFlow.None => HKCategoryValueMenstrualFlow.None,
+		_ => HKCategoryValueMenstrualFlow.Unspecified,
+	});
+
+	static OvulationTestResult MapHKOvulation(HKCategoryValueOvulationTestResult v) => v switch
+	{
+		HKCategoryValueOvulationTestResult.Negative => OvulationTestResult.Negative,
+		HKCategoryValueOvulationTestResult.LuteinizingHormoneSurge => OvulationTestResult.Positive,
+		HKCategoryValueOvulationTestResult.EstrogenSurge => OvulationTestResult.High,
+		_ => OvulationTestResult.Unspecified,
+	};
+
+	static long MapToHKOvulation(OvulationTestResult r) => (long)(r switch
+	{
+		OvulationTestResult.Negative => HKCategoryValueOvulationTestResult.Negative,
+		OvulationTestResult.Positive => HKCategoryValueOvulationTestResult.LuteinizingHormoneSurge,
+		OvulationTestResult.High => HKCategoryValueOvulationTestResult.EstrogenSurge,
+		_ => HKCategoryValueOvulationTestResult.Indeterminate,
+	});
+
 	// Group iOS category stage samples into sessions, splitting on gaps larger than an hour.
 	static List<SleepSession> GroupSleepSessions(List<SleepStageSample> samples)
 	{

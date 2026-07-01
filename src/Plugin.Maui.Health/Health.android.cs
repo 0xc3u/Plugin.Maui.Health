@@ -1267,6 +1267,186 @@ partial class HealthDataProviderImplementation : IHealth
 	public Task<HealthCharacteristics> ReadCharacteristicsAsync(CancellationToken cancellationToken = default)
 		=> throw new HealthException("Characteristics are not available on Android Health Connect.");
 
+	// ── Cycle tracking ────────────────────────────────────────────────────────
+
+	public async Task<bool> RequestCyclePermissionAsync(PermissionType permissionType, CancellationToken cancellationToken = default)
+	{
+		string[] bases = { "MENSTRUATION", "OVULATION_TEST", "SEXUAL_ACTIVITY", "INTERMENSTRUAL_BLEEDING" };
+		var required = new HashSet<string>();
+		var permissions = new Java.Util.HashSet();
+		foreach (var b in bases)
+		{
+			if (permissionType.HasFlag(PermissionType.Read))
+			{
+				var p = $"android.permission.health.READ_{b}";
+				required.Add(p);
+				permissions.Add(new Java.Lang.String(p));
+			}
+			if (permissionType.HasFlag(PermissionType.Write))
+			{
+				var p = $"android.permission.health.WRITE_{b}";
+				required.Add(p);
+				permissions.Add(new Java.Lang.String(p));
+			}
+		}
+
+		if (required.Count == 0)
+		{
+			return true;
+		}
+
+		if (await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false))
+		{
+			return true;
+		}
+
+		await RequestFromHealthConnectAsync(permissions, cancellationToken).ConfigureAwait(false);
+		return await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false);
+	}
+
+	public async Task<List<CycleEntry>> ReadCycleAsync(DateTimeOffset from, DateTimeOffset until, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var tf = TimeRangeFilter.Between(from.ToInstant(), until.ToInstant());
+			var entries = new List<CycleEntry>();
+
+			foreach (var r in await ReadAllPagesAsync<MenstruationFlowRecord>(client, tf).ConfigureAwait(false))
+				entries.Add(new CycleEntry
+				{
+					Time = r.Time.ToDateTimeUtc(),
+					Type = CycleEventType.MenstruationFlow,
+					Flow = MapAndroidFlow(r.Flow),
+					Source = r.Metadata?.DataOrigin?.PackageName,
+				});
+
+			foreach (var r in await ReadAllPagesAsync<OvulationTestRecord>(client, tf).ConfigureAwait(false))
+				entries.Add(new CycleEntry
+				{
+					Time = r.Time.ToDateTimeUtc(),
+					Type = CycleEventType.OvulationTest,
+					OvulationResult = MapAndroidOvulation(r.Result),
+					Source = r.Metadata?.DataOrigin?.PackageName,
+				});
+
+			foreach (var r in await ReadAllPagesAsync<SexualActivityRecord>(client, tf).ConfigureAwait(false))
+				entries.Add(new CycleEntry
+				{
+					Time = r.Time.ToDateTimeUtc(),
+					Type = CycleEventType.SexualActivity,
+					Protection = MapAndroidProtection(r.ProtectionUsed),
+					Source = r.Metadata?.DataOrigin?.PackageName,
+				});
+
+			foreach (var r in await ReadAllPagesAsync<IntermenstrualBleedingRecord>(client, tf).ConfigureAwait(false))
+				entries.Add(new CycleEntry
+				{
+					Time = r.Time.ToDateTimeUtc(),
+					Type = CycleEventType.IntermenstrualBleeding,
+					Source = r.Metadata?.DataOrigin?.PackageName,
+				});
+
+			return entries.OrderBy(e => e.Time).ToList();
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<bool> WriteCycleAsync(CycleEntry entry, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var t = entry.Time.ToInstant();
+			var meta = Metadata.ManualEntry();
+
+			Java.Lang.Object record = entry.Type switch
+			{
+				CycleEventType.MenstruationFlow => new MenstruationFlowRecord(t, null, meta, MapToAndroidFlow(entry.Flow)),
+				CycleEventType.OvulationTest => new OvulationTestRecord(t, null, MapToAndroidOvulation(entry.OvulationResult), meta),
+				CycleEventType.SexualActivity => new SexualActivityRecord(t, null, meta, MapToAndroidProtection(entry.Protection)),
+				CycleEventType.IntermenstrualBleeding => new IntermenstrualBleedingRecord(t, null, meta),
+				_ => throw new HealthException($"Unsupported cycle event: {entry.Type}"),
+			};
+
+			await InvokeCoroutine(c => client.InsertRecords(
+				new List<IRecord> { Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)! }, c))
+				.ConfigureAwait(false);
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	static MenstruationFlow MapAndroidFlow(int flow)
+	{
+		if (flow == MenstruationFlowRecord.FlowLight) return MenstruationFlow.Light;
+		if (flow == MenstruationFlowRecord.FlowMedium) return MenstruationFlow.Medium;
+		if (flow == MenstruationFlowRecord.FlowHeavy) return MenstruationFlow.Heavy;
+		return MenstruationFlow.Unspecified;
+	}
+
+	static int MapToAndroidFlow(MenstruationFlow flow) => flow switch
+	{
+		MenstruationFlow.Light => MenstruationFlowRecord.FlowLight,
+		MenstruationFlow.Medium => MenstruationFlowRecord.FlowMedium,
+		MenstruationFlow.Heavy => MenstruationFlowRecord.FlowHeavy,
+		_ => MenstruationFlowRecord.FlowUnknown,
+	};
+
+	static OvulationTestResult MapAndroidOvulation(int result)
+	{
+		if (result == OvulationTestRecord.ResultPositive) return OvulationTestResult.Positive;
+		if (result == OvulationTestRecord.ResultNegative) return OvulationTestResult.Negative;
+		if (result == OvulationTestRecord.ResultHigh) return OvulationTestResult.High;
+		return OvulationTestResult.Unspecified;
+	}
+
+	static int MapToAndroidOvulation(OvulationTestResult r) => r switch
+	{
+		OvulationTestResult.Positive => OvulationTestRecord.ResultPositive,
+		OvulationTestResult.Negative => OvulationTestRecord.ResultNegative,
+		OvulationTestResult.High => OvulationTestRecord.ResultHigh,
+		_ => OvulationTestRecord.ResultInconclusive,
+	};
+
+	static SexualActivityProtection MapAndroidProtection(int p)
+	{
+		if (p == SexualActivityRecord.ProtectionUsedProtected) return SexualActivityProtection.Protected;
+		if (p == SexualActivityRecord.ProtectionUsedUnprotected) return SexualActivityProtection.Unprotected;
+		return SexualActivityProtection.Unspecified;
+	}
+
+	static int MapToAndroidProtection(SexualActivityProtection p) => p switch
+	{
+		SexualActivityProtection.Protected => SexualActivityRecord.ProtectionUsedProtected,
+		SexualActivityProtection.Unprotected => SexualActivityRecord.ProtectionUsedUnprotected,
+		_ => SexualActivityRecord.ProtectionUsedUnknown,
+	};
+
 	static SleepStage MapAndroidSleepStage(int stage)
 	{
 		if (stage == SleepSessionRecord.StageTypeAwake) return SleepStage.Awake;
