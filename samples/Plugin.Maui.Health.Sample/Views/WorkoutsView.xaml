@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
+             xmlns:m="clr-namespace:Plugin.Maui.Health.Models;assembly=Plugin.Maui.Health"
+             x:Class="Plugin.Maui.Health.Sample.Views.WorkoutsView"
+             x:DataType="vm:WorkoutsViewViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
+             Title="Workouts">
+    <ContentPage.Resources>
+        <charts:MetersToKmConverter x:Key="MetersToKm" />
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+
+            <!-- Selected workout + GPS route map -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="{Binding SelectedTitle}" Style="{StaticResource SectionHeader}" />
+                            <Label Text="{Binding SelectedStats}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Log run" Style="{StaticResource AccentButton}"
+                                Command="{Binding LogWorkoutCommand}" VerticalOptions="Center" />
+                    </Grid>
+                    <charts:RouteMapView Route="{Binding SelectedRoute}" LineColor="{StaticResource AccentViolet}" HeightRequest="240" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Recent workouts (tap to view route) -->
+            <Label Text="Recent workouts" Style="{StaticResource SectionHeader}" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Workouts}" Spacing="12">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="m:WorkoutSession">
+                        <Border Style="{StaticResource Card}" Padding="16">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutsViewViewModel}}, Path=SelectCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding WorkoutType}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" />
+                                <Label Grid.Row="1" Grid.Column="0" Text="{Binding From, StringFormat='{0:ddd, MMM d · HH:mm}'}" Style="{StaticResource MutedLabel}" />
+                                <Label Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" VerticalOptions="Center" HorizontalOptions="End"
+                                       Text="{Binding TotalDistanceInMeters, Converter={StaticResource MetersToKm}}" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource AccentViolet}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

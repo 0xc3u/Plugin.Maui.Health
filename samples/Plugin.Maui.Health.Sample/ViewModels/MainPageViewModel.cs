@@ -178,6 +178,7 @@ public partial class MainPageViewModel : BaseViewModel
 		{
 			new Models.MenuItem("Body Measurements", typeof(BodyMeasurementsView)),
 			new Models.MenuItem("Heart Rate", typeof(HeartRateView)),
+			new Models.MenuItem("Workouts", typeof(WorkoutsView)),
 			new Models.MenuItem("Vitamins", typeof(VitaminsView))
 		};
 
