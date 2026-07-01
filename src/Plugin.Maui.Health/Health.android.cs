@@ -83,6 +83,11 @@ partial class HealthDataProviderImplementation : IHealth
 			("android.permission.health.READ_SPEED", "android.permission.health.WRITE_SPEED"),
 		HealthParameter.RunningPower => ("android.permission.health.READ_POWER", "android.permission.health.WRITE_POWER"),
 		HealthParameter.ExerciseTime => ("android.permission.health.READ_EXERCISE", "android.permission.health.WRITE_EXERCISE"),
+		HealthParameter.TotalEnergyBurned => ("android.permission.health.READ_TOTAL_CALORIES_BURNED", "android.permission.health.WRITE_TOTAL_CALORIES_BURNED"),
+		HealthParameter.BoneMass => ("android.permission.health.READ_BONE_MASS", "android.permission.health.WRITE_BONE_MASS"),
+		HealthParameter.BodyWaterMass => ("android.permission.health.READ_BODY_WATER_MASS", "android.permission.health.WRITE_BODY_WATER_MASS"),
+		HealthParameter.ElevationGained => ("android.permission.health.READ_ELEVATION_GAINED", "android.permission.health.WRITE_ELEVATION_GAINED"),
+		HealthParameter.PushCount => ("android.permission.health.READ_WHEELCHAIR_PUSHES", "android.permission.health.WRITE_WHEELCHAIR_PUSHES"),
 		HealthParameter.DietaryWater => ("android.permission.health.READ_HYDRATION", "android.permission.health.WRITE_HYDRATION"),
 		HealthParameter.DietaryBiotin or HealthParameter.DietaryCaffeine or
 		HealthParameter.DietaryCalcium or HealthParameter.DietaryCarbohydrates or
@@ -736,6 +741,24 @@ partial class HealthDataProviderImplementation : IHealth
 				HealthParameter.FlightsClimbed => new FloorsClimbedRecord(
 					startInstant, null, endInstant, null, valueToStore, metadata),
 
+				HealthParameter.TotalEnergyBurned => new TotalCaloriesBurnedRecord(
+					startInstant, null, endInstant, null,
+					Energy.InvokeKilocalories(valueToStore), metadata),
+
+				HealthParameter.ElevationGained => new ElevationGainedRecord(
+					startInstant, null, endInstant, null,
+					Length.InvokeMeters(valueToStore), metadata),
+
+				HealthParameter.PushCount => new WheelchairPushesRecord(
+					startInstant, null, endInstant, null,
+					(long)valueToStore, metadata),
+
+				HealthParameter.BoneMass => new BoneMassRecord(
+					startInstant, null, Mass.InvokeKilograms(valueToStore), metadata),
+
+				HealthParameter.BodyWaterMass => new BodyWaterMassRecord(
+					startInstant, null, Mass.InvokeKilograms(valueToStore), metadata),
+
 				HealthParameter.WalkingSpeed or HealthParameter.RunningSpeed =>
 					new SpeedRecord(startInstant, null, endInstant, null,
 						new List<SpeedRecord.Sample>
@@ -1182,6 +1205,26 @@ partial class HealthDataProviderImplementation : IHealth
 			HealthParameter.FlightsClimbed => await ReadSimpleRecordsAsync<FloorsClimbedRecord>(
 				client, timeFilter, unit,
 				r => (r.Floors, r.StartTime.ToDateTimeUtc(), r.EndTime.ToDateTimeUtc())),
+
+			HealthParameter.TotalEnergyBurned => await ReadSimpleRecordsAsync<TotalCaloriesBurnedRecord>(
+				client, timeFilter, unit,
+				r => (r.Energy.Kilocalories, r.StartTime.ToDateTimeUtc(), r.EndTime.ToDateTimeUtc())),
+
+			HealthParameter.ElevationGained => await ReadSimpleRecordsAsync<ElevationGainedRecord>(
+				client, timeFilter, unit,
+				r => (r.Elevation.Meters, r.StartTime.ToDateTimeUtc(), r.EndTime.ToDateTimeUtc())),
+
+			HealthParameter.PushCount => await ReadSimpleRecordsAsync<WheelchairPushesRecord>(
+				client, timeFilter, unit,
+				r => ((double)r.Count, r.StartTime.ToDateTimeUtc(), r.EndTime.ToDateTimeUtc())),
+
+			HealthParameter.BoneMass => await ReadSimpleInstantRecordsAsync<BoneMassRecord>(
+				client, timeFilter, unit,
+				r => (r.Mass.Kilograms, r.Time.ToDateTimeUtc())),
+
+			HealthParameter.BodyWaterMass => await ReadSimpleInstantRecordsAsync<BodyWaterMassRecord>(
+				client, timeFilter, unit,
+				r => (r.Mass.Kilograms, r.Time.ToDateTimeUtc())),
 
 			HealthParameter.WalkingSpeed or HealthParameter.RunningSpeed =>
 				await ReadSpeedRecordsAsync(client, timeFilter, unit),

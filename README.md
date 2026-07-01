@@ -664,6 +664,8 @@ Legend: **Y** = supported, **—** = not supported on this platform
 | `BodyFatPercentage` | Y | Y | `health.READ_BODY_FAT` / `WRITE_BODY_FAT` |
 | `LeanBodyMass` | Y | Y | `health.READ_LEAN_BODY_MASS` / `WRITE_LEAN_BODY_MASS` |
 | `WaistCircumference` | Y | — | — |
+| `BoneMass` | — | Y | `health.READ_BONE_MASS` / `WRITE_BONE_MASS` |
+| `BodyWaterMass` | — | Y | `health.READ_BODY_WATER_MASS` / `WRITE_BODY_WATER_MASS` |
 
 ### Heart & Cardiovascular
 
@@ -688,11 +690,13 @@ Legend: **Y** = supported, **—** = not supported on this platform
 | `DistanceDownhillSnowSports` | Y | — | — |
 | `ActiveEnergyBurned` | Y | Y | `health.READ_ACTIVE_CALORIES_BURNED` / `WRITE_ACTIVE_CALORIES_BURNED` |
 | `BasalEnergyBurned` | Y | Y | `health.READ_BASAL_METABOLIC_RATE` / `WRITE_BASAL_METABOLIC_RATE` |
+| `TotalEnergyBurned` | — | Y | `health.READ_TOTAL_CALORIES_BURNED` / `WRITE_TOTAL_CALORIES_BURNED` |
 | `FlightsClimbed` | Y | Y | `health.READ_FLOORS_CLIMBED` / `WRITE_FLOORS_CLIMBED` |
+| `ElevationGained` | — | Y | `health.READ_ELEVATION_GAINED` / `WRITE_ELEVATION_GAINED` |
 | `ExerciseTime` | Y | Y | `health.READ_EXERCISE` / `WRITE_EXERCISE` |
 | `StandTime` | Y | — | — |
 | `MoveTime` | Y | — | — |
-| `PushCount` | Y | — | — |
+| `PushCount` | Y | Y | `health.READ_WHEELCHAIR_PUSHES` / `WRITE_WHEELCHAIR_PUSHES` |
 | `SwimmingStrokeCount` | Y | — | — |
 | `NikeFuel` | Y | — | — |
 

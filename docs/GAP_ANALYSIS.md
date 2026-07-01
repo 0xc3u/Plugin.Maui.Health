@@ -132,9 +132,12 @@ aggregation API.
       vitals/other. iOS quantity coverage is now comprehensive.)*
 - [x] Surface `ReadAllAsync` paging to stop silent truncation. *(All Android read helpers now follow
       the page token via `ReadAllPagesAsync<T>` instead of a single 1,000-record read.)*
-- [ ] Add low-hanging Android records (`TotalCaloriesBurned`, `BoneMass`, `BodyWaterMass`,
-      `ElevationGained`, `WheelchairPushes`). *(Remaining — needs new enum values + on-device
-      round-trip verification of the Kotlin record constructors.)*
+- [x] Add low-hanging Android records. *(Added `TotalEnergyBurned`, `ElevationGained`, `BoneMass`,
+      `BodyWaterMass` as new Android-only `HealthParameter` values, and wired `PushCount` to Health
+      Connect's `WheelchairPushesRecord` (now cross-platform). All five write→read round-trips verified
+      on the emulator.)*
+
+**Tier 1 complete.**
 
 ### Tier 2 — medium effort, broad value
 - [ ] Bucketed aggregation API (daily/weekly).

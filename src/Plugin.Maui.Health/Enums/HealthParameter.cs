@@ -105,4 +105,10 @@ public enum HealthParameter
 	SleepingWristTemperature,
 	UnderwaterDepth,
 	WaterTemperature,
+
+	// Android Health Connect-only records (no HealthKit quantity-type equivalent).
+	TotalEnergyBurned,
+	BoneMass,
+	BodyWaterMass,
+	ElevationGained,
 }
