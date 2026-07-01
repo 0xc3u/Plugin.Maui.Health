@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
+             x:Class="Plugin.Maui.Health.Sample.Views.HeartRateView"
+             x:DataType="vm:HeartRateViewViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
+             Title="Heart Rate">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+
+            <!-- Current + trend -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Heart rate" Style="{StaticResource SectionHeader}" />
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="{Binding LatestBpm, StringFormat='{0:F0}'}" Style="{StaticResource MetricValue}" />
+                                <Label Text="bpm" Style="{StaticResource MetricCaption}" VerticalOptions="End" Margin="0,0,0,6" />
+                            </HorizontalStackLayout>
+                            <Label Text="last 12 hours" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Refresh" Style="{StaticResource AccentButton}"
+                                Command="{Binding RefreshCommand}" VerticalOptions="Center" />
+                    </Grid>
+                    <charts:LineChartView Entries="{Binding HeartRateTrend}" LineColor="{StaticResource AccentPink}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Stats -->
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Average" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding AverageBpm, StringFormat='{0:F0}'}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" />
+                        <Label Text="bpm" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Min" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding MinBpm, StringFormat='{0:F0}'}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource AccentBlue}" />
+                        <Label Text="bpm" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Max" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding MaxBpm, StringFormat='{0:F0}'}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource AccentPink}" />
+                        <Label Text="bpm" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Add a reading -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Add a reading" Style="{StaticResource SectionHeader}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Grid.Column="0" Text="{Binding NewHeartRate}" Placeholder="Enter bpm" Keyboard="Numeric" Style="{StaticResource SoftEntry}" />
+                        <Button Grid.Column="1" Text="Write" Style="{StaticResource AccentButton}" Command="{Binding WriteHeartRateCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

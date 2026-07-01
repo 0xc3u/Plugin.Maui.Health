@@ -53,6 +53,7 @@ public partial class BaseViewModel : ObservableObject, IViewModel
 		var requests = new (HealthParameter, PermissionType)[]
 		{
 			(HealthParameter.StepCount, rw),
+			(HealthParameter.HeartRate, rw),
 			(HealthParameter.BodyMass, rw),
 			(HealthParameter.Height, rw),
 			(HealthParameter.BodyFatPercentage, rw),
