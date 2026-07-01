@@ -973,6 +973,60 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	public async Task<bool> UpsertAsync(HealthParameter healthParameter, DateTimeOffset? date, double value, string unit,
+		string clientId, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			{
+				throw new HealthException($"{healthParameter} not available");
+			}
+
+			var currentDate = date ?? DateTimeOffset.Now;
+			var start = ToNSDate(currentDate);
+			var end = start.AddSeconds(1);
+			var hkUnit = GetHKUnit(unit);
+			var quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
+			var quantity = HKQuantity.FromQuantity(hkUnit, value);
+
+			// A shared sync identifier + increasing sync version makes HealthKit replace the prior sample.
+			var meta = new NSMutableDictionary
+			{
+				[HKMetadataKey.SyncIdentifier] = new NSString(clientId),
+				[HKMetadataKey.SyncVersion] = NSNumber.FromLong((nint)DateTimeOffset.UtcNow.Ticks),
+				[HKMetadataKey.WasUserEntered] = NSNumber.FromBoolean(true),
+			};
+
+			var sample = HKQuantitySample.FromType(quantityType, quantity, start, end, meta);
+			var tcs = new TaskCompletionSource<bool>();
+			healthStore.SaveObject(sample, (success, error) =>
+			{
+				try
+				{
+					if (success)
+						tcs.TrySetResult(true);
+					else
+						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? $"Failed to upsert {healthParameter} to HealthKit."));
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+			return await tcs.Task.ConfigureAwait(false);
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	// Extracts provenance (source app, device, recording method) from a HealthKit sample.
 	static (string source, string? device, RecordingMethod method) Provenance(HKSample sample)
 	{

@@ -145,11 +145,15 @@ aggregation API.
       emulator. Native `HKStatisticsCollectionQuery` / `aggregateGroupByPeriod` is a future optimisation.)*
 - [x] `DeleteAsync` (delete-by-range). *(iOS `DeleteObjects`; Android `DeleteRecords` by record type +
       time range. Round-trip verified.)*
-- [ ] `UpdateAsync`/upsert (with client dedup id).
+- [x] Upsert — `UpsertAsync` with a client id. *(Android `clientRecordId` + version; iOS
+      `HKMetadataKeySyncIdentifier` + `SyncVersion`. Verified: two writes with one id → one record,
+      updated value.)*
 - [x] Batch write — `WriteAllAsync`. *(One `SaveObjects` / `InsertRecords`. Round-trip verified.)*
 - [x] Data provenance — `Sample.Device` + `Sample.RecordingMethod`, and `Source` now reports the real
       data-origin package (Android) / source name (iOS). *(Verified: manual-entry seed reads back as
       `method=Manual`, source = app package.)* Native source-filtering on reads remains a follow-up.
+
+**Tier 2 complete.** (Follow-ups: native aggregation for cumulative types; source-filtered reads.)
 
 ### Tier 3 — differentiating
 - [ ] Background/observer + change-based sync (+ Android background/history permissions & feature gating).

@@ -868,6 +868,40 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	public async Task<bool> UpsertAsync(HealthParameter healthParameter, DateTimeOffset? date, double value, string unit,
+		string clientId, CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var ts = date ?? DateTimeOffset.UtcNow;
+			var start = ts.ToInstant();
+			var end = ts.AddSeconds(1).ToInstant();
+
+			// clientRecordId ties repeated writes together; the increasing version makes the latest win.
+			var metadata = Metadata.ManualEntry(clientId, DateTimeOffset.UtcNow.Ticks, null);
+			var record = BuildRecordForWrite(healthParameter, value, start, end, metadata);
+
+			await InvokeCoroutine(c => client.InsertRecords(
+				new List<IRecord> { Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)! }, c))
+				.ConfigureAwait(false);
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	public async Task<bool> DeleteAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
 		CancellationToken cancellationToken = default)
 	{

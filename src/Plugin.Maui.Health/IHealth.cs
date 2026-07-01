@@ -177,6 +177,19 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Writes a value tagged with a stable client id so repeated writes with the same id replace the
+	/// previous one instead of creating duplicates (upsert; latest write wins).
+	/// </summary>
+	/// <param name="clientId">
+	/// Your app's stable identifier for this measurement. Maps to Health Connect's
+	/// <c>clientRecordId</c> and HealthKit's <c>HKMetadataKeySyncIdentifier</c>; the library supplies an
+	/// increasing version so the most recent write wins on conflict.
+	/// </param>
+	/// <returns>True if the value was stored/updated successfully.</returns>
+	Task<bool> UpsertAsync(HealthParameter healthParameter, DateTimeOffset? date, double value, string unit,
+		string clientId, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Checks (and requests, on iOS) authorization to read and/or write workout sessions and GPS routes.
 	/// Must be called before using <see cref="ReadWorkoutsAsync"/>, <see cref="ReadLatestWorkoutAsync"/>,
 	/// or <see cref="WriteWorkoutAsync"/>.
