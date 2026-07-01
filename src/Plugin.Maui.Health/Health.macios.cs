@@ -77,6 +77,54 @@ partial class HealthDataProviderImplementation : IHealth
 		{HealthParameter.DietaryPotassium, HKQuantityTypeIdentifier.DietaryPotassium},
 		{HealthParameter.DietaryCaffeine, HKQuantityTypeIdentifier.DietaryCaffeine},
 		{HealthParameter.VO2Max, HKQuantityTypeIdentifier.VO2Max},
+
+		// Cardiac
+		{HealthParameter.RestingHeartRate, HKQuantityTypeIdentifier.RestingHeartRate},
+		{HealthParameter.WalkingHeartRateAverage, HKQuantityTypeIdentifier.WalkingHeartRateAverage},
+		{HealthParameter.HeartRateVariabilitySdnn, HKQuantityTypeIdentifier.HeartRateVariabilitySdnn},
+		{HealthParameter.HeartRateRecoveryOneMinute, HKQuantityTypeIdentifier.HeartRateRecoveryOneMinute},
+		{HealthParameter.AtrialFibrillationBurden, HKQuantityTypeIdentifier.AtrialFibrillationBurden},
+
+		// Activity & energy
+		{HealthParameter.ExerciseTime, HKQuantityTypeIdentifier.AppleExerciseTime},
+		{HealthParameter.StandTime, HKQuantityTypeIdentifier.AppleStandTime},
+		{HealthParameter.MoveTime, HKQuantityTypeIdentifier.AppleMoveTime},
+		{HealthParameter.PushCount, HKQuantityTypeIdentifier.PushCount},
+		{HealthParameter.DistanceSwimming, HKQuantityTypeIdentifier.DistanceSwimming},
+		{HealthParameter.SwimmingStrokeCount, HKQuantityTypeIdentifier.SwimmingStrokeCount},
+		{HealthParameter.DistanceWheelchair, HKQuantityTypeIdentifier.DistanceWheelchair},
+		{HealthParameter.DistanceDownhillSnowSports, HKQuantityTypeIdentifier.DistanceDownhillSnowSports},
+
+		// Running dynamics
+		{HealthParameter.RunningSpeed, HKQuantityTypeIdentifier.RunningSpeed},
+		{HealthParameter.RunningPower, HKQuantityTypeIdentifier.RunningPower},
+		{HealthParameter.RunningStrideLength, HKQuantityTypeIdentifier.RunningStrideLength},
+		{HealthParameter.RunningGroundContactTime, HKQuantityTypeIdentifier.RunningGroundContactTime},
+		{HealthParameter.RunningVerticalOscillation, HKQuantityTypeIdentifier.RunningVerticalOscillation},
+
+		// Mobility & gait
+		{HealthParameter.WalkingSpeed, HKQuantityTypeIdentifier.WalkingSpeed},
+		{HealthParameter.WalkingStepLength, HKQuantityTypeIdentifier.WalkingStepLength},
+		{HealthParameter.WalkingAsymmetryPercentage, HKQuantityTypeIdentifier.WalkingAsymmetryPercentage},
+		{HealthParameter.WalkingDoubleSupportPercentage, HKQuantityTypeIdentifier.WalkingDoubleSupportPercentage},
+		{HealthParameter.WalkingSteadiness, HKQuantityTypeIdentifier.AppleWalkingSteadiness},
+		{HealthParameter.StairAscentSpeed, HKQuantityTypeIdentifier.StairAscentSpeed},
+		{HealthParameter.StairDescentSpeed, HKQuantityTypeIdentifier.StairDescentSpeed},
+		{HealthParameter.SixMinuteWalkTestDistance, HKQuantityTypeIdentifier.SixMinuteWalkTestDistance},
+
+		// Body, vitals & other
+		{HealthParameter.WaistCircumference, HKQuantityTypeIdentifier.WaistCircumference},
+		{HealthParameter.BasalBodyTemperature, HKQuantityTypeIdentifier.BasalBodyTemperature},
+		{HealthParameter.SleepingWristTemperature, HKQuantityTypeIdentifier.AppleSleepingWristTemperature},
+		{HealthParameter.InsulinDelivery, HKQuantityTypeIdentifier.InsulinDelivery},
+		{HealthParameter.DietaryWater, HKQuantityTypeIdentifier.DietaryWater},
+		{HealthParameter.UVExposure, HKQuantityTypeIdentifier.UVExposure},
+		{HealthParameter.ElectrodermalActivity, HKQuantityTypeIdentifier.ElectrodermalActivity},
+		{HealthParameter.EnvironmentalAudioExposure, HKQuantityTypeIdentifier.EnvironmentalAudioExposure},
+		{HealthParameter.HeadphoneAudioExposure, HKQuantityTypeIdentifier.HeadphoneAudioExposure},
+		{HealthParameter.NumberOfAlcoholicBeverages, HKQuantityTypeIdentifier.NumberOfAlcoholicBeverages},
+		{HealthParameter.UnderwaterDepth, HKQuantityTypeIdentifier.UnderwaterDepth},
+		{HealthParameter.WaterTemperature, HKQuantityTypeIdentifier.WaterTemperature},
 	};
 
 	readonly Dictionary<WorkoutType, HKWorkoutActivityType> workoutTypeMapping = new()

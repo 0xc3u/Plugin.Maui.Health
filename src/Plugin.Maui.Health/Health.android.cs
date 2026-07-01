@@ -1309,6 +1309,27 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// Health Connect returns at most 1,000 records per ReadRecords call. Follow the page token so long
+	// ranges / high-frequency sensors aren't silently truncated at 1,000.
+	static async Task<List<T>> ReadAllPagesAsync<T>(
+		IHealthConnectClient client, TimeRangeFilter filter, bool ascending = true)
+		where T : Java.Lang.Object
+	{
+		var klass = GetKClass<T>();
+		var all = new List<T>();
+		string? pageToken = null;
+		do
+		{
+			var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), ascending, 1000, pageToken);
+			var resp = (ReadRecordsResponse)(await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false))!;
+			all.AddRange(resp.Records.OfType<T>());
+			pageToken = resp.PageToken;
+		}
+		while (!string.IsNullOrEmpty(pageToken));
+
+		return all;
+	}
+
 	static async Task<List<Sample>> ReadSimpleRecordsAsync<T>(
 		IHealthConnectClient client,
 		TimeRangeFilter filter,
@@ -1316,11 +1337,8 @@ partial class HealthDataProviderImplementation : IHealth
 		Func<T, (double value, DateTimeOffset from, DateTimeOffset until)> extract)
 		where T : Java.Lang.Object
 	{
-		var klass = GetKClass<T>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
-		return resp.Records.OfType<T>()
+		var records = await ReadAllPagesAsync<T>(client, filter).ConfigureAwait(false);
+		return records
 			.Select(r => { var (v, f, u) = extract(r); return new Sample(f, u, v, "Health Connect", unit); })
 			.ToList();
 	}
@@ -1332,11 +1350,8 @@ partial class HealthDataProviderImplementation : IHealth
 		Func<T, (double value, DateTimeOffset time)> extract)
 		where T : Java.Lang.Object
 	{
-		var klass = GetKClass<T>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
-		return resp.Records.OfType<T>()
+		var records = await ReadAllPagesAsync<T>(client, filter).ConfigureAwait(false);
+		return records
 			.Select(r => { var (v, t) = extract(r); return new Sample(t, t, v, "Health Connect", unit); })
 			.ToList();
 	}
@@ -1362,18 +1377,10 @@ partial class HealthDataProviderImplementation : IHealth
 	static async Task<List<Sample>> ReadHeartRateRecordsAsync(
 		IHealthConnectClient client, TimeRangeFilter filter, string unit)
 	{
-		var klass = GetKClass<HeartRateRecord>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
+		var records = await ReadAllPagesAsync<HeartRateRecord>(client, filter).ConfigureAwait(false);
 		var result = new List<Sample>();
-		foreach (var rawRecord in resp.Records)
+		foreach (var rec in records)
 		{
-			if (rawRecord is not HeartRateRecord rec)
-			{
-				continue;
-			}
-
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
@@ -1386,18 +1393,10 @@ partial class HealthDataProviderImplementation : IHealth
 	static async Task<List<Sample>> ReadSpeedRecordsAsync(
 		IHealthConnectClient client, TimeRangeFilter filter, string unit)
 	{
-		var klass = GetKClass<SpeedRecord>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
+		var records = await ReadAllPagesAsync<SpeedRecord>(client, filter).ConfigureAwait(false);
 		var result = new List<Sample>();
-		foreach (var rawRecord in resp.Records)
+		foreach (var rec in records)
 		{
-			if (rawRecord is not SpeedRecord rec)
-			{
-				continue;
-			}
-
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
@@ -1410,18 +1409,10 @@ partial class HealthDataProviderImplementation : IHealth
 	static async Task<List<Sample>> ReadPowerRecordsAsync(
 		IHealthConnectClient client, TimeRangeFilter filter, string unit)
 	{
-		var klass = GetKClass<PowerRecord>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
+		var records = await ReadAllPagesAsync<PowerRecord>(client, filter).ConfigureAwait(false);
 		var result = new List<Sample>();
-		foreach (var rawRecord in resp.Records)
+		foreach (var rec in records)
 		{
-			if (rawRecord is not PowerRecord rec)
-			{
-				continue;
-			}
-
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
@@ -1434,18 +1425,10 @@ partial class HealthDataProviderImplementation : IHealth
 	static async Task<List<Sample>> ReadNutritionFieldRecordsAsync(
 		HealthParameter param, IHealthConnectClient client, TimeRangeFilter filter, string unit)
 	{
-		var klass = GetKClass<NutritionRecord>();
-		var req = new ReadRecordsRequest(klass, filter, new List<DataOrigin>(), true, 1000, null);
-		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
-		var resp = (ReadRecordsResponse)respObj!;
+		var records = await ReadAllPagesAsync<NutritionRecord>(client, filter).ConfigureAwait(false);
 		var result = new List<Sample>();
-		foreach (var rawRecord in resp.Records)
+		foreach (var rec in records)
 		{
-			if (rawRecord is not NutritionRecord rec)
-			{
-				continue;
-			}
-
 			var value = ExtractNutritionField(param, rec);
 			if (value.HasValue)
 			{
