@@ -828,7 +828,7 @@ a sleep-stage timeline. On first launch it seeds representative data into the de
 the plugin and reads it back, so every screen reflects genuine round-tripped data on **both** Android
 (Health Connect) and iOS (HealthKit):
 
-**Dashboard** — goal ring + weekly steps bar chart:
+**Dashboard** — a "Today" activity hero (goal ring + weekly steps) plus an "at a glance" grid of live tiles (heart rate, sleep, weight, workouts, vitamins, permissions), each tapping through to its detail screen:
 
 | Android (Health Connect) | iOS (HealthKit) |
 |---|---|
