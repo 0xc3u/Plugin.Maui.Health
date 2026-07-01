@@ -1,3 +1,19 @@
+# [1.5.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.4.0...v1.5.0) (2026-07-01)
+
+
+### Features
+
+* add Android Health Connect body & activity records ([9f0e854](https://github.com/0xc3u/Plugin.Maui.Health/commit/9f0e854b1d3f160b0959fab5eac461bff5d165a6))
+* add batch write (WriteAllAsync) and DeleteAsync ([a995e76](https://github.com/0xc3u/Plugin.Maui.Health/commit/a995e762c38cbe0436d2f567df0d7527d6084c5b))
+* add bucketed aggregation (ReadStatisticsAsync) ([c2542cd](https://github.com/0xc3u/Plugin.Maui.Health/commit/c2542cd0a7c69705889c8bd0f7a6d3ba6cdc905d))
+* add mindfulness sessions and iOS characteristics ([38cb161](https://github.com/0xc3u/Plugin.Maui.Health/commit/38cb1614e738e1f8e00f07d252037de60b0afc2e))
+* add reproductive / menstrual-cycle tracking ([33aa10b](https://github.com/0xc3u/Plugin.Maui.Health/commit/33aa10bd52c6df1d3be1296d67d1e11af5e55904))
+* add UpsertAsync (write-with-client-id dedup) ([02fba69](https://github.com/0xc3u/Plugin.Maui.Health/commit/02fba69d26b7a3bfec11de7398c013de428c15aa))
+* expose data provenance on samples ([a714feb](https://github.com/0xc3u/Plugin.Maui.Health/commit/a714feb9fa7242ab7989250c87ecda574aa31f44))
+* **sample:** hide the Shell nav bar on the dashboard ([b1b07d9](https://github.com/0xc3u/Plugin.Maui.Health/commit/b1b07d9a3b971ff2281b59d47548844cec5acbe2))
+* **sample:** modernize dashboard with a live "at a glance" tile grid ([1637163](https://github.com/0xc3u/Plugin.Maui.Health/commit/1637163a9ddcad91682f53b1bfd4a97907e7be90))
+* wire missing iOS quantity types + page Android reads ([789029e](https://github.com/0xc3u/Plugin.Maui.Health/commit/789029e6fcdece3c9b7fdbf8e78c7a8c5259376f))
+
 # [1.4.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.3.0...v1.4.0) (2026-07-01)
 
 
