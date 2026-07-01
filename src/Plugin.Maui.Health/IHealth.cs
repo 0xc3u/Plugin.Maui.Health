@@ -21,6 +21,22 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Checks whether authorization for <b>all</b> of the given parameters is currently granted, in a
+	/// single call. A convenience batch companion to <see cref="CheckPermissionAsync"/>.
+	/// </summary>
+	/// <param name="requests">The parameters and the read/write access to check for each.</param>
+	/// <returns>True only if every requested permission is granted.</returns>
+	/// <remarks>
+	/// Like <see cref="CheckPermissionAsync"/>, this never prompts the user — on Android it only queries
+	/// already-granted state (it does not launch the Health Connect consent UI); on iOS checking and
+	/// requesting are the same HealthKit operation. Parameters not supported by a platform are skipped
+	/// rather than failing the whole check.
+	/// </remarks>
+	Task<bool> CheckPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Requests authorization for the given health parameter and permission type by presenting the
 	/// platform's consent UI, then reports whether the permission ends up granted. This is the
 	/// cross-platform way to obtain consent — the plugin maps the parameter to the correct native

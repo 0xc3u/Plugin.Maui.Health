@@ -165,6 +165,32 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// ── CheckPermissionsAsync (batched) ───────────────────────────────────────
+
+	public async Task<bool> CheckPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default)
+	{
+		var required = new HashSet<string>();
+
+		foreach (var (parameter, permissionType) in requests)
+		{
+			// Skip parameters Health Connect doesn't support rather than failing the whole check.
+			var (readPerm, writePerm) = GetPermissions(parameter);
+			if (permissionType.HasFlag(PermissionType.Read) && readPerm is not null)
+				required.Add(readPerm);
+			if (permissionType.HasFlag(PermissionType.Write) && writePerm is not null)
+				required.Add(writePerm);
+		}
+
+		if (required.Count == 0)
+		{
+			return true; // nothing supported on Android in this set
+		}
+
+		return await AreAllGrantedAsync(required, cancellationToken).ConfigureAwait(false);
+	}
+
 	// ── CheckWorkoutPermissionAsync ───────────────────────────────────────────
 
 	public async Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType,

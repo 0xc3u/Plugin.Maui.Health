@@ -26,6 +26,7 @@ public static class MauiProgram
 		builder.Services.AddSingletonWithShellRoute<HeartRateView, HeartRateViewViewModel>(nameof(HeartRateView));
 		builder.Services.AddSingletonWithShellRoute<WorkoutsView, WorkoutsViewViewModel>(nameof(WorkoutsView));
 		builder.Services.AddSingletonWithShellRoute<SleepView, SleepViewViewModel>(nameof(SleepView));
+		builder.Services.AddSingletonWithShellRoute<PermissionsView, PermissionsViewModel>(nameof(PermissionsView));
 
 
 		return builder.Build();

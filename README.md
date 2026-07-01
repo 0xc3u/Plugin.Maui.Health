@@ -341,6 +341,7 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `RequestPermissionsAsync(requests)` | Requests **several** parameters in a single consent prompt. Preferred over multiple `RequestPermissionAsync` calls — on iOS, presenting several HealthKit sheets in a row can hang the app. |
 | `RequestWorkoutPermissionAsync(type)` | Requests read/write access to workout sessions and GPS routes via the consent UI. |
 | `CheckPermissionAsync(param, type)` | Checks whether the specified read/write permission is currently granted (does not prompt on Android). |
+| `CheckPermissionsAsync(requests)` | Checks whether **all** of the given permissions are granted, in a single call. The batch companion to `CheckPermissionAsync` (does not prompt on Android). |
 | `CheckWorkoutPermissionAsync(type)` | Checks whether workout (exercise) read/write permission is currently granted. |
 | `ReadCountAsync(param, from, until)` | Returns the cumulative sum for count-based parameters (e.g. steps, flights climbed). |
 | `ReadLatestAsync(param, from, until, unit)` | Returns the most recent single value within the date range. |
@@ -472,6 +473,17 @@ same HealthKit operation):
 
 ```csharp
 bool granted = await health.CheckPermissionAsync(HealthParameter.HeartRate, PermissionType.Read);
+```
+
+Checking several at once? Use the batch companion — it returns `true` only if **every** permission is granted:
+
+```csharp
+bool allGranted = await health.CheckPermissionsAsync(new[]
+{
+    (HealthParameter.StepCount, PermissionType.Read | PermissionType.Write),
+    (HealthParameter.HeartRate, PermissionType.Read),
+    (HealthParameter.BodyMass,  PermissionType.Read | PermissionType.Write),
+});
 ```
 
 ### Read step count (last 24 hours)

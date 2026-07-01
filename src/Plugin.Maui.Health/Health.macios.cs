@@ -224,6 +224,72 @@ partial class HealthDataProviderImplementation : IHealth
 		return true;
 	}
 
+	public async Task<bool> CheckPermissionsAsync(
+		IEnumerable<(HealthParameter healthParameter, PermissionType permissionType)> requests,
+		CancellationToken cancellationToken = default)
+	{
+		if (!IsSupported)
+		{
+			throw new HealthException("HealthKit not available on your device");
+		}
+
+		var readTypes = new List<HKObjectType>();
+		var writeTypes = new List<HKSampleType>();
+
+		foreach (var (parameter, permissionType) in requests)
+		{
+			// Skip parameters this platform doesn't know rather than failing the whole batch.
+			if (!healthParameterMapping.TryGetValue(parameter, out var id))
+				continue;
+
+			var type = HKQuantityType.Create(id);
+			if (type is null)
+				continue;
+
+			if (permissionType.HasFlag(PermissionType.Read))
+				readTypes.Add(type);
+			if (permissionType.HasFlag(PermissionType.Write))
+				writeTypes.Add(type);
+		}
+
+		if (readTypes.Count == 0 && writeTypes.Count == 0)
+		{
+			return true;
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			// On iOS checking and requesting share the same operation; a single authorization request
+			// keeps it to one sheet (presenting several in a row can hang the app).
+			NSSet? typesToRead = readTypes.Count > 0 ? new NSSet(readTypes.ToArray()) : null;
+			NSSet? typesToWrite = writeTypes.Count > 0 ? new NSSet(writeTypes.ToArray()) : null;
+
+			var (success, _) = await healthStore.RequestAuthorizationToShareAsync(typesToWrite, typesToRead).ConfigureAwait(false);
+			if (!success)
+			{
+				return false;
+			}
+
+			// HealthKit never reveals read-grant status, so only write denials are detectable.
+			foreach (var writeType in writeTypes)
+			{
+				if (healthStore.GetAuthorizationStatus(writeType) == HKAuthorizationStatus.SharingDenied)
+					return false;
+			}
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	public async Task<bool> CheckWorkoutPermissionAsync(PermissionType permissionType,
 		CancellationToken cancellationToken = default)
 	{

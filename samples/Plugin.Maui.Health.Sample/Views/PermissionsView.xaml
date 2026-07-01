@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
+             x:Class="Plugin.Maui.Health.Sample.Views.PermissionsView"
+             x:DataType="vm:PermissionsViewModel"
+             BackgroundColor="{StaticResource PageBackground}"
+             Title="Permissions">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+
+            <!-- Explain + grant -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Ask once" Style="{StaticResource SectionHeader}" />
+                    <Label Style="{StaticResource MutedLabel}"
+                           Text="This sample reads and writes steps, heart rate, body measurements, vitamins, workouts and sleep. A single batched request grants them all in one prompt — one HealthKit sheet on iOS, one Health Connect screen on Android." />
+                    <Button Text="Grant all permissions"
+                            Style="{StaticResource AccentButton}"
+                            Command="{Binding GrantAllCommand}" />
+                    <Label Text="{Binding StatusMessage}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Status list (batched CheckPermissionsAsync) -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Current access" Style="{StaticResource SectionHeader}" />
+                        <Button Grid.Column="1" Text="Re-check" Style="{StaticResource SoftButton}" Command="{Binding RefreshCommand}" />
+                    </Grid>
+
+                    <CollectionView ItemsSource="{Binding Rows}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PermissionRow">
+                                <Grid ColumnDefinitions="*,Auto" Padding="0,12">
+                                    <Label Grid.Column="0" Text="{Binding Name}" TextColor="{StaticResource TextPrimary}" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding StatusText}" FontAttributes="Bold" TextColor="{StaticResource TextSecondary}" VerticalOptions="Center">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding Granted}" Value="True">
+                                                <Setter Property="TextColor" Value="{StaticResource AccentGreen}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Style="{StaticResource MutedLabel}"
+                           Text="On iOS, HealthKit never reveals read-grant status, so read-only access always shows as granted; only write denials are detectable. On Android the status reflects exactly what Health Connect has granted." />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

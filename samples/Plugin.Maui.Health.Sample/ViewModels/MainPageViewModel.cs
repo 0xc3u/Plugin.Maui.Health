@@ -176,6 +176,7 @@ public partial class MainPageViewModel : BaseViewModel
 	{
 		MenuItems = new ObservableCollection<Models.MenuItem>
 		{
+			new Models.MenuItem("Permissions", typeof(PermissionsView)),
 			new Models.MenuItem("Body Measurements", typeof(BodyMeasurementsView)),
 			new Models.MenuItem("Heart Rate", typeof(HeartRateView)),
 			new Models.MenuItem("Sleep", typeof(SleepView)),
