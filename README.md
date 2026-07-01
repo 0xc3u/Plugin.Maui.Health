@@ -40,7 +40,7 @@ HealthKit is a **restricted capability**. Before your app can access any health 
 3. In the **Capabilities** list, enable **HealthKit**.
 4. Save the changes and **regenerate** any provisioning profiles that use this App ID (Xcode or the portal will prompt you).
 
-> HealthKit is **not available in the iOS Simulator** — all HealthKit calls will throw `"HealthKit not available on your device"`. Use a physical iPhone or iPad for testing.
+> HealthKit **is available on modern iOS Simulators** — you can seed and read data there for development. Always gate calls behind `IsSupported`, which returns `false` on platforms/devices where HealthKit is unavailable.
 
 ---
 
@@ -353,6 +353,9 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `ReadWorkoutsAsync(type, from, until)` | Returns all workout sessions in the date range, including GPS routes if available. |
 | `ReadLatestWorkoutAsync(type, from, until)` | Returns the most recent workout session. |
 | `WriteWorkoutAsync(session)` | Writes a workout session (with optional GPS route) to the health store. |
+| `RequestSleepPermissionAsync(type)` | Requests read/write access to sleep data via the consent UI (iOS `SleepAnalysis`; Android `READ_SLEEP` / `WRITE_SLEEP`). |
+| `ReadSleepAsync(from, until)` | Returns the sleep sessions in the date range, each with its per-stage breakdown. |
+| `WriteSleepAsync(session)` | Writes a sleep session, including its stage segments, to the health store. |
 
 All async methods accept an optional `CancellationToken` as the last parameter.
 
@@ -390,6 +393,24 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `AltitudeInMeters` | `double?` | Altitude |
 | `HorizontalAccuracyInMeters` / `VerticalAccuracyInMeters` | `double?` | Accuracy |
 
+**`SleepSession`** — returned by `ReadSleepAsync` (and passed to `WriteSleepAsync`):
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `From` | `DateTimeOffset` | Start of the night |
+| `Until` | `DateTimeOffset` | End of the night |
+| `DurationInSeconds` | `double` | Total span (`Until − From`) |
+| `Source` | `string?` | App or device that recorded the session |
+| `Stages` | `IReadOnlyList<SleepStageSample>` | Per-stage breakdown of the night |
+
+**`SleepStageSample`** — a single stage segment within a `SleepSession.Stages`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `From` | `DateTimeOffset` | Segment start time |
+| `Until` | `DateTimeOffset` | Segment end time |
+| `Stage` | `SleepStage` | The stage during this segment |
+
 ### Enums
 
 | Enum | Values |
@@ -397,6 +418,7 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `PermissionType` | `Read`, `Write` — combine with the bitwise OR (`PermissionType.Read \| PermissionType.Write`). |
 | `HealthParameter` | ~100 values (steps, heart rate, body metrics, blood values, nutrition/vitamins, mobility …). See the matrix below. |
 | `WorkoutType` | Activity types (`Running`, `Cycling`, `Swimming`, …). Use `WorkoutType.Other` to match/return **all** types. |
+| `SleepStage` | `Unknown`, `Awake`, `InBed`, `Sleeping`, `Light`, `Deep`, `Rem` — normalised across HealthKit and Health Connect. |
 
 ### Units
 
@@ -549,6 +571,48 @@ if (await health.RequestWorkoutPermissionAsync(PermissionType.Write))
     await health.WriteWorkoutAsync(session);
 ```
 
+### Read & write sleep sessions
+
+Sleep is session data (not a single quantity): each `SleepSession` carries a list of `SleepStageSample`
+segments describing the night's hypnogram. Request the dedicated sleep permission, then read or write.
+
+```csharp
+if (await health.RequestSleepPermissionAsync(PermissionType.Read | PermissionType.Write))
+{
+    // Read the last two nights, with per-stage breakdown
+    var sessions = await health.ReadSleepAsync(DateTimeOffset.Now.AddDays(-2), DateTimeOffset.Now);
+
+    foreach (var night in sessions)
+    {
+        double asleepMinutes = night.Stages
+            .Where(s => s.Stage is SleepStage.Light or SleepStage.Deep or SleepStage.Rem or SleepStage.Sleeping)
+            .Sum(s => (s.Until - s.From).TotalMinutes);
+
+        Console.WriteLine($"{night.From:ddd}: {asleepMinutes:F0} min asleep, {night.Stages.Count} segments");
+    }
+}
+```
+
+```csharp
+// Write a night's sleep with its stages
+var wake = DateTimeOffset.Now.Date.AddHours(7);
+var session = new SleepSession
+{
+    From = wake.AddHours(-8),
+    Until = wake,
+    DurationInSeconds = TimeSpan.FromHours(8).TotalSeconds,
+    Stages = new List<SleepStageSample>
+    {
+        new() { From = wake.AddHours(-8), Until = wake.AddHours(-7), Stage = SleepStage.Light },
+        new() { From = wake.AddHours(-7), Until = wake.AddHours(-6), Stage = SleepStage.Deep  },
+        new() { From = wake.AddHours(-6), Until = wake.AddHours(-5), Stage = SleepStage.Rem   },
+        new() { From = wake.AddHours(-5), Until = wake,              Stage = SleepStage.Light },
+    }
+};
+
+await health.WriteSleepAsync(session);
+```
+
 ### Error handling
 
 Every method throws a single exception type — `HealthException` — for hard failures (unsupported
@@ -672,6 +736,16 @@ Legend: **Y** = supported, **—** = not supported on this platform
 | GPS route (read) | Y | Y | `health.READ_EXERCISE_ROUTES` |
 | GPS route (write) | Y | Y | `health.WRITE_EXERCISE_ROUTE` |
 
+### Sleep
+
+| Feature | iOS | Android | Android Permission |
+|--------|-----|---------|-------------------|
+| Read sleep sessions | Y | Y | `health.READ_SLEEP` |
+| Write sleep sessions | Y | Y | `health.WRITE_SLEEP` |
+| Per-stage breakdown (Light / Deep / REM / Awake) | Y | Y | — |
+
+On iOS, sleep is stored as `HKCategoryType.SleepAnalysis` samples, which the plugin groups into sessions by time gaps. On Android, each `SleepSessionRecord` (with its `Stage` list) maps to one `SleepSession`.
+
 ### Nutrition & Hydration
 
 All nutrition parameters use `health.READ_NUTRITION` / `WRITE_NUTRITION` on Android. Water uses `health.READ_HYDRATION` / `WRITE_HYDRATION`.
@@ -736,10 +810,11 @@ All nutrition parameters use `health.READ_NUTRITION` / `WRITE_NUTRITION` on Andr
 
 ## Sample App
 
-The sample app is a card-based dashboard with charts drawn using **MAUI.Graphics** (a goal ring, a
-weekly steps bar chart and a weight-trend line chart). On first launch it seeds representative data
-into the device's health store via the plugin and reads it back, so every chart reflects genuine
-round-tripped data on **both** Android (Health Connect) and iOS (HealthKit):
+The sample app is a card-based dashboard with charts drawn using **MAUI.Graphics** — a goal ring, a
+weekly steps bar chart, a weight-trend line chart, a heart-rate time series, a workout GPS-route map and
+a sleep-stage timeline. On first launch it seeds representative data into the device's health store via
+the plugin and reads it back, so every screen reflects genuine round-tripped data on **both** Android
+(Health Connect) and iOS (HealthKit):
 
 **Dashboard** — goal ring + weekly steps bar chart:
 
@@ -752,6 +827,12 @@ round-tripped data on **both** Android (Health Connect) and iOS (HealthKit):
 | Body Measurements | Heart Rate | Vitamins |
 |---|---|---|
 | ![Body Measurements screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_body_measurements.png?raw=true) | ![Heart Rate screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_heart_rate.png?raw=true) | ![Vitamins screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_vitamins.png?raw=true) |
+
+**Workouts & Sleep** — a workout with its GPS route drawn from real route points, and a sleep-stage timeline with per-stage totals. Both round-trip through the plugin on Android (Health Connect) and iOS (HealthKit):
+
+| Workouts (GPS route) | Sleep (stage timeline) |
+|---|---|
+| ![Workouts screen with GPS route](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_workouts.png?raw=true) | ![Sleep screen with stage timeline](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_sleep.png?raw=true) |
 
 Try the sample app to test the plugin on your own device.
 
