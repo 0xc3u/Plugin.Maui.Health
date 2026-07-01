@@ -10,11 +10,12 @@
 
 	<!-- Shared platform minimums / SDK levels (applied per inner build). -->
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<!-- Health Connect requires API 30 as the backward-compatibility floor. -->
-		<AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+		<!-- Health Connect is available from Android 9 (API 28): Play Store app on API 28-33,
+		     part of the system on API 34+. Gate calls behind IHealth.IsSupported. -->
+		<AndroidMinSdkVersion>28</AndroidMinSdkVersion>
 		<!-- Google Play target level. -->
 		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
-		<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>28.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">

@@ -22,9 +22,9 @@ Install with the dotnet CLI: `dotnet add package Plugin.Maui.Health`, or through
 | Platform | Minimum Version | Health Backend |
 |----------|----------------|----------------|
 | iOS      | 15.0+          | Apple HealthKit |
-| Android  | API 30+ (Android 11+) | Health Connect |
+| Android  | API 28+ (Android 9+) | Health Connect |
 
-> **Android note:** Health Connect is pre-installed on Android 14+ and available as a standalone app from the Play Store on Android 11–13. `IsSupported` returns `false` if Health Connect is not installed.
+> **Android note:** Health Connect is pre-installed on Android 14+ and available as a standalone app from the Play Store on Android 9–13. `IsSupported` returns `false` if Health Connect is not installed/available.
 
 
 ## Setup Guide
@@ -125,8 +125,8 @@ Android uses **Health Connect** as the health data backend. The setup involves `
 | Android version | Health Connect |
 |----------------|---------------|
 | Android 14+ (API 34+) | Pre-installed as a system component |
-| Android 11–13 (API 30–33) | Must be installed by the user from the Play Store |
-| Below Android 11 (API < 30) | Not supported — `IsSupported` returns `false` |
+| Android 9–13 (API 28–33) | Must be installed by the user from the Play Store |
+| Below Android 9 (API < 28) | Not supported — `IsSupported` returns `false` |
 
 Your app should check `HealthDataProvider.Default.IsSupported` before making any calls and guide users to install Health Connect when it is missing:
 
@@ -148,11 +148,11 @@ if (!healthDataProvider.IsSupported)
 
 ```xml
 <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-  <!-- Health Connect requires API 30 minimum -->
-  <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+  <!-- Health Connect is available from API 28 (Android 9) -->
+  <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
   <!-- Target API 35 for Google Play compliance -->
   <AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
-  <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+  <SupportedOSPlatformVersion>28.0</SupportedOSPlatformVersion>
 </PropertyGroup>
 
 <ItemGroup Condition="$(TargetFramework.Contains('-android'))">

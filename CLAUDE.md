@@ -171,8 +171,9 @@ permanent spinner). Steps daily totals use `ReadAllAsync` summed per day (robust
 
 ## Conventions & gotchas
 
-- Target frameworks and minimum OS versions are pinned in the `.csproj`; the iOS `SupportedOSPlatformVersion`
-  floor is 15.0 (HealthKit requirement), Android `AndroidMinSdkVersion` is 30 (Health Connect requirement).
+- Minimum OS versions live in `Directory.Build.props`: iOS `SupportedOSPlatformVersion` floor is 15.0
+  (HealthKit requirement); Android `AndroidMinSdkVersion` is 28 (Health Connect is available from Android 9
+  — Play Store app on API 28–33, system component on 34+). Gate all calls behind `IsSupported`.
 - Android `ReadAllAsync` returns **at most 1,000 records per call** — split long ranges for high-frequency
   sensors (heart rate, speed).
 - Package versions are managed centrally via `Directory.Packages.props` (CPM); shared MSBuild
