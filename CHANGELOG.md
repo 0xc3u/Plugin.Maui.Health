@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.3.0...v1.4.0) (2026-07-01)
+
+
+### Features
+
+* add batched CheckPermissionsAsync and a Permissions demo screen ([1c46ec9](https://github.com/0xc3u/Plugin.Maui.Health/commit/1c46ec95c0801d1dfcb88d2cccfcaf8297e2d4bd))
+
 # [1.3.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.2.0...v1.3.0) (2026-07-01)
 
 
