@@ -351,6 +351,8 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `ReadMaxAsync(param, from, until, unit)` | Returns the maximum value over the date range. |
 | `ReadAllAsync(param, from, until, unit)` | Returns all samples in the date range as `IEnumerable<Sample>`. |
 | `WriteAsync(param, date, value, unit)` | Writes a single value to the health store. |
+| `WriteAllAsync(param, values, unit)` | Writes several timestamped values in one call — one `SaveObjects` / `InsertRecords` (bulk import). |
+| `DeleteAsync(param, from, until)` | Deletes this app's samples for the parameter within the date range. |
 | `ReadWorkoutsAsync(type, from, until)` | Returns all workout sessions in the date range, including GPS routes if available. |
 | `ReadLatestWorkoutAsync(type, from, until)` | Returns the most recent workout session. |
 | `WriteWorkoutAsync(session)` | Writes a workout session (with optional GPS route) to the health store. |

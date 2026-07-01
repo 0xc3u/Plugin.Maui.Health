@@ -143,6 +143,29 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Writes several timestamped values for the same parameter in a single call — far cheaper than a
+	/// loop of <see cref="WriteAsync"/> for bulk imports. Maps to one HealthKit <c>SaveObjects</c> /
+	/// one Health Connect <c>InsertRecords</c>.
+	/// </summary>
+	/// <param name="values">The (timestamp, value) pairs to write, all in <paramref name="unit"/>.</param>
+	/// <param name="unit">The unit of every value. Use <see cref="Constants.Units"/> constants.</param>
+	/// <returns>True if the values were stored successfully (true for an empty set).</returns>
+	Task<bool> WriteAllAsync(HealthParameter healthParameter, IEnumerable<(DateTimeOffset date, double value)> values,
+		string unit, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Deletes all of this app's samples for the given parameter within the date range.
+	/// </summary>
+	/// <remarks>
+	/// Only data your app wrote can be deleted. On Android, parameters that share a Health Connect record
+	/// type (e.g. systolic/diastolic blood pressure, walking/cycling distance, or any nutrient) are stored
+	/// together, so deleting one deletes that shared record within the range.
+	/// </remarks>
+	/// <returns>True if the delete completed (true even when nothing matched).</returns>
+	Task<bool> DeleteAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Checks (and requests, on iOS) authorization to read and/or write workout sessions and GPS routes.
 	/// Must be called before using <see cref="ReadWorkoutsAsync"/>, <see cref="ReadLatestWorkoutAsync"/>,
 	/// or <see cref="WriteWorkoutAsync"/>.

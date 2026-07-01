@@ -653,11 +653,36 @@ partial class HealthDataProviderImplementation : IHealth
 			var endInstant = ts.AddSeconds(1).ToInstant();
 			var metadata = Metadata.ManualEntry();
 
-			Java.Lang.Object record = healthParameter switch
-			{
-				HealthParameter.StepCount => new StepsRecord(
-					startInstant, null, endInstant, null,
-					(long)valueToStore, metadata),
+			var record = BuildRecordForWrite(healthParameter, valueToStore, startInstant, endInstant, metadata);
+
+			await InvokeCoroutine(c => client.InsertRecords(
+				new List<IRecord> { Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)! }, c))
+				.ConfigureAwait(false);
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	// Builds the Health Connect record for one (parameter, value, time) write. Shared by WriteAsync and
+	// WriteAllAsync so the parameter→record mapping lives in a single place.
+	static Java.Lang.Object BuildRecordForWrite(HealthParameter healthParameter, double valueToStore,
+		Java.Time.Instant startInstant, Java.Time.Instant endInstant, Metadata metadata)
+		=> healthParameter switch
+		{
+			HealthParameter.StepCount => new StepsRecord(
+				startInstant, null, endInstant, null,
+				(long)valueToStore, metadata),
 
 				HealthParameter.HeartRate => new HeartRateRecord(
 					startInstant, null, endInstant, null,
@@ -801,12 +826,32 @@ partial class HealthDataProviderImplementation : IHealth
 				HealthParameter.DietaryVitaminK or HealthParameter.DietaryZinc =>
 					BuildNutritionRecord(healthParameter, valueToStore, startInstant, endInstant, metadata),
 
-				_ => throw new HealthException($"Not supported on Android: {healthParameter}"),
-			};
+			_ => throw new HealthException($"Not supported on Android: {healthParameter}"),
+		};
 
-			await InvokeCoroutine(c => client.InsertRecords(
-				new List<IRecord> { Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)! }, c))
-				.ConfigureAwait(false);
+	public async Task<bool> WriteAllAsync(HealthParameter healthParameter, IEnumerable<(DateTimeOffset date, double value)> values,
+		string unit, CancellationToken cancellationToken = default)
+	{
+		var list = values as IReadOnlyList<(DateTimeOffset date, double value)> ?? values.ToList();
+		if (list.Count == 0)
+		{
+			return true;
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var records = new List<IRecord>(list.Count);
+			foreach (var (date, value) in list)
+			{
+				var start = date.ToInstant();
+				var end = date.AddSeconds(1).ToInstant();
+				var record = BuildRecordForWrite(healthParameter, value, start, end, Metadata.ManualEntry());
+				records.Add(Java.Interop.JavaObjectExtensions.JavaCast<IRecord>(record)!);
+			}
+
+			await InvokeCoroutine(c => client.InsertRecords(records, c)).ConfigureAwait(false);
 			return true;
 		}
 		catch (HealthException)
@@ -822,6 +867,82 @@ partial class HealthDataProviderImplementation : IHealth
 			semaphore.Release();
 		}
 	}
+
+	public async Task<bool> DeleteAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default)
+	{
+		var recordClass = GetRecordClass(healthParameter)
+			?? throw new HealthException($"Not supported on Android: {healthParameter}");
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			var client = GetClient();
+			var timeFilter = TimeRangeFilter.Between(from.ToInstant(), until.ToInstant());
+			await InvokeCoroutine(c => client.DeleteRecords(recordClass, timeFilter, c)).ConfigureAwait(false);
+			return true;
+		}
+		catch (HealthException)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "Android");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	// Maps a parameter to its Health Connect record KClass for delete-by-time-range. Parameters that
+	// share a record type (blood pressure, distance, speed, all nutrients) resolve to that shared record.
+	static IKClass? GetRecordClass(HealthParameter param) => param switch
+	{
+		HealthParameter.StepCount => GetKClass<StepsRecord>(),
+		HealthParameter.HeartRate => GetKClass<HeartRateRecord>(),
+		HealthParameter.RestingHeartRate => GetKClass<RestingHeartRateRecord>(),
+		HealthParameter.HeartRateVariabilitySdnn => GetKClass<HeartRateVariabilityRmssdRecord>(),
+		HealthParameter.BodyMass => GetKClass<WeightRecord>(),
+		HealthParameter.Height => GetKClass<HeightRecord>(),
+		HealthParameter.BodyFatPercentage => GetKClass<BodyFatRecord>(),
+		HealthParameter.LeanBodyMass => GetKClass<LeanBodyMassRecord>(),
+		HealthParameter.BoneMass => GetKClass<BoneMassRecord>(),
+		HealthParameter.BodyWaterMass => GetKClass<BodyWaterMassRecord>(),
+		HealthParameter.DistanceWalkingRunning or HealthParameter.DistanceCycling => GetKClass<DistanceRecord>(),
+		HealthParameter.ActiveEnergyBurned => GetKClass<ActiveCaloriesBurnedRecord>(),
+		HealthParameter.TotalEnergyBurned => GetKClass<TotalCaloriesBurnedRecord>(),
+		HealthParameter.BasalEnergyBurned => GetKClass<BasalMetabolicRateRecord>(),
+		HealthParameter.ElevationGained => GetKClass<ElevationGainedRecord>(),
+		HealthParameter.PushCount => GetKClass<WheelchairPushesRecord>(),
+		HealthParameter.BloodGlucose => GetKClass<BloodGlucoseRecord>(),
+		HealthParameter.BloodPressureSystolic or HealthParameter.BloodPressureDiastolic => GetKClass<BloodPressureRecord>(),
+		HealthParameter.OxygenSaturation => GetKClass<OxygenSaturationRecord>(),
+		HealthParameter.BodyTemperature => GetKClass<BodyTemperatureRecord>(),
+		HealthParameter.BasalBodyTemperature => GetKClass<BasalBodyTemperatureRecord>(),
+		HealthParameter.RespiratoryRate => GetKClass<RespiratoryRateRecord>(),
+		HealthParameter.VO2Max => GetKClass<Vo2MaxRecord>(),
+		HealthParameter.FlightsClimbed => GetKClass<FloorsClimbedRecord>(),
+		HealthParameter.WalkingSpeed or HealthParameter.RunningSpeed => GetKClass<SpeedRecord>(),
+		HealthParameter.RunningPower => GetKClass<PowerRecord>(),
+		HealthParameter.ExerciseTime => GetKClass<ExerciseSessionRecord>(),
+		HealthParameter.DietaryWater => GetKClass<HydrationRecord>(),
+		HealthParameter.DietaryBiotin or HealthParameter.DietaryCaffeine or HealthParameter.DietaryCalcium or
+		HealthParameter.DietaryCarbohydrates or HealthParameter.DietaryChloride or HealthParameter.DietaryCholesterol or
+		HealthParameter.DietaryChromium or HealthParameter.DietaryCopper or HealthParameter.DietaryEnergyConsumed or
+		HealthParameter.DietaryFatMonounsaturated or HealthParameter.DietaryFatPolyunsaturated or HealthParameter.DietaryFatSaturated or
+		HealthParameter.DietaryFatTotal or HealthParameter.DietaryFiber or HealthParameter.DietaryFolate or
+		HealthParameter.DietaryIodine or HealthParameter.DietaryIron or HealthParameter.DietaryMagnesium or
+		HealthParameter.DietaryManganese or HealthParameter.DietaryMolybdenum or HealthParameter.DietaryNiacin or
+		HealthParameter.DietaryPantothenicAcid or HealthParameter.DietaryPhosphorus or HealthParameter.DietaryPotassium or
+		HealthParameter.DietaryProtein or HealthParameter.DietaryRiboflavin or HealthParameter.DietarySelenium or
+		HealthParameter.DietarySodium or HealthParameter.DietarySugar or HealthParameter.DietaryThiamin or
+		HealthParameter.DietaryVitaminA or HealthParameter.DietaryVitaminB12 or HealthParameter.DietaryVitaminB6 or
+		HealthParameter.DietaryVitaminC or HealthParameter.DietaryVitaminD or HealthParameter.DietaryVitaminE or
+		HealthParameter.DietaryVitaminK or HealthParameter.DietaryZinc => GetKClass<NutritionRecord>(),
+		_ => null,
+	};
 
 	// ── Workout methods ───────────────────────────────────────────────────────
 

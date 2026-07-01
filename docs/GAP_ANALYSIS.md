@@ -141,8 +141,10 @@ aggregation API.
 
 ### Tier 2 — medium effort, broad value
 - [ ] Bucketed aggregation API (daily/weekly).
-- [ ] `DeleteAsync` + `UpdateAsync`/upsert (with client dedup id).
-- [ ] Batch write.
+- [x] `DeleteAsync` (delete-by-range). *(iOS `DeleteObjects`; Android `DeleteRecords` by record type +
+      time range. Round-trip verified.)*
+- [ ] `UpdateAsync`/upsert (with client dedup id).
+- [x] Batch write — `WriteAllAsync`. *(One `SaveObjects` / `InsertRecords`. Round-trip verified.)*
 - [ ] Data provenance (device, recording method, source filter).
 
 ### Tier 3 — differentiating

@@ -876,6 +876,103 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	public async Task<bool> WriteAllAsync(HealthParameter healthParameter, IEnumerable<(DateTimeOffset date, double value)> values,
+		string unit, CancellationToken cancellationToken = default)
+	{
+		var list = values as IReadOnlyList<(DateTimeOffset date, double value)> ?? values.ToList();
+		if (list.Count == 0)
+		{
+			return true;
+		}
+
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			{
+				throw new HealthException($"{healthParameter} not available");
+			}
+
+			var hkUnit = GetHKUnit(unit);
+			var quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
+			var metaData = new NSDictionary(HKMetadataKey.WasUserEntered, new NSNumber(true));
+
+			var samples = new HKObject[list.Count];
+			for (int i = 0; i < list.Count; i++)
+			{
+				var start = ToNSDate(list[i].date);
+				var end = start.AddSeconds(1);
+				samples[i] = HKQuantitySample.FromType(quantityType, HKQuantity.FromQuantity(hkUnit, list[i].value), start, end, metaData);
+			}
+
+			var tcs = new TaskCompletionSource<bool>();
+			healthStore.SaveObjects(samples, (success, error) =>
+			{
+				try
+				{
+					if (success)
+						tcs.TrySetResult(true);
+					else
+						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? $"Failed to write {healthParameter} to HealthKit."));
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+			return await tcs.Task.ConfigureAwait(false);
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
+	public async Task<bool> DeleteAsync(HealthParameter healthParameter, DateTimeOffset from, DateTimeOffset until,
+		CancellationToken cancellationToken = default)
+	{
+		await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			if (!healthParameterMapping.TryGetValue(healthParameter, out var requestedHealthParameter))
+			{
+				throw new HealthException($"{healthParameter} not available");
+			}
+
+			var quantityType = HKQuantityType.Create(requestedHealthParameter) ?? throw new HealthException($"{requestedHealthParameter} not available");
+			var predicate = HKQuery.GetPredicateForSamples(ToNSDate(from), ToNSDate(until), HKQueryOptions.None);
+
+			var tcs = new TaskCompletionSource<bool>();
+			healthStore.DeleteObjects(quantityType, predicate, (success, count, error) =>
+			{
+				try
+				{
+					if (success)
+						tcs.TrySetResult(true);
+					else
+						tcs.TrySetException(new HealthException(error?.LocalizedDescription ?? $"Failed to delete {healthParameter} from HealthKit."));
+				}
+				catch (Exception ex)
+				{
+					tcs.TrySetException(HealthException.Wrap(ex, "iOS"));
+				}
+			});
+			return await tcs.Task.ConfigureAwait(false);
+		}
+		catch (Exception ex)
+		{
+			throw HealthException.Wrap(ex, "iOS");
+		}
+		finally
+		{
+			semaphore.Release();
+		}
+	}
+
 	static HKUnit GetHKUnit(string unit)
 	{
 		HKUnit hkUnit;
