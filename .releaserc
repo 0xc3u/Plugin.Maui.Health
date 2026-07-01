@@ -2,7 +2,15 @@
   "tagFormat": "v${version}",
   "branches": [ "master", "main" ],
   "plugins": [
-    "@semantic-release/commit-analyzer",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "releaseRules": [
+          { "scope": "sample", "release": false },
+          { "scope": "samples", "release": false }
+        ]
+      }
+    ],
     "@semantic-release/release-notes-generator",
     [
       "@semantic-release/changelog",
