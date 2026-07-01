@@ -140,7 +140,9 @@ aggregation API.
 **Tier 1 complete.**
 
 ### Tier 2 — medium effort, broad value
-- [ ] Bucketed aggregation API (daily/weekly).
+- [x] Bucketed aggregation API — `ReadStatisticsAsync` (hourly/daily/weekly/monthly, sum vs average).
+      *(Shared client-side bucketing over the paged `ReadAllAsync`; verified daily step totals on the
+      emulator. Native `HKStatisticsCollectionQuery` / `aggregateGroupByPeriod` is a future optimisation.)*
 - [x] `DeleteAsync` (delete-by-range). *(iOS `DeleteObjects`; Android `DeleteRecords` by record type +
       time range. Round-trip verified.)*
 - [ ] `UpdateAsync`/upsert (with client dedup id).

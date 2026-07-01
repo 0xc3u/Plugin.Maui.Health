@@ -350,6 +350,7 @@ var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
 | `ReadMinAsync(param, from, until, unit)` | Returns the minimum value over the date range. |
 | `ReadMaxAsync(param, from, until, unit)` | Returns the maximum value over the date range. |
 | `ReadAllAsync(param, from, until, unit)` | Returns all samples in the date range as `IEnumerable<Sample>`. |
+| `ReadStatisticsAsync(param, from, until, interval, unit)` | Aggregates the parameter into hourly/daily/weekly/monthly buckets (sum for cumulative, average for discrete). |
 | `WriteAsync(param, date, value, unit)` | Writes a single value to the health store. |
 | `WriteAllAsync(param, values, unit)` | Writes several timestamped values in one call — one `SaveObjects` / `InsertRecords` (bulk import). |
 | `DeleteAsync(param, from, until)` | Deletes this app's samples for the parameter within the date range. |

@@ -134,6 +134,17 @@ public interface IHealth
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Returns the parameter aggregated into time buckets (hourly / daily / weekly / monthly) over the
+	/// range — e.g. daily step totals or a weekly average weight — so callers don't have to bucket by
+	/// hand. Cumulative parameters are summed per bucket; discrete parameters are averaged.
+	/// </summary>
+	/// <param name="interval">The bucket size. Buckets align to local-time boundaries.</param>
+	/// <param name="unit">The unit for the values. Use <see cref="Constants.Units"/> constants.</param>
+	/// <returns>One <see cref="StatisticsBucket"/> per interval across the range (including empty buckets).</returns>
+	Task<List<StatisticsBucket>> ReadStatisticsAsync(HealthParameter healthParameter, DateTimeOffset from,
+		DateTimeOffset until, StatisticsInterval interval, string unit, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Writes a single health value for the given parameter.
 	/// </summary>
 	/// <param name="date">The timestamp to associate with the value; defaults to now if null.</param>
