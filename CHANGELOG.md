@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.1.0...v1.2.0) (2026-07-01)
+
+
+### Features
+
+* lower Android minimum to API 28 (Android 9) ([43bc64a](https://github.com/0xc3u/Plugin.Maui.Health/commit/43bc64a38a4b56334dcec422505cd72648defe8b))
+
 # [1.1.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.0.0...v1.1.0) (2026-07-01)
 
 
