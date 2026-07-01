@@ -156,11 +156,17 @@ aggregation API.
 **Tier 2 complete.** (Follow-ups: native aggregation for cumulative types; source-filtered reads.)
 
 ### Tier 3 — differentiating
-- [ ] Background/observer + change-based sync (+ Android background/history permissions & feature gating).
+- [—] Background/observer + change-based sync — **out of scope by design.** The plugin is a
+      pull/manual-refresh API: consumers re-read (or re-open a screen) to get the latest data. Background
+      delivery / observer queries / change tokens are deliberately not provided.
 - [x] Reproductive / cycle tracking — `RequestCyclePermissionAsync` / `ReadCycleAsync` / `WriteCycleAsync`
       with a unified `CycleEntry` (menstruation flow, ovulation test, sexual activity, intermenstrual
       bleeding). *(Cross-platform; all four types verified write→read on the emulator. iOS reads sexual-
       activity protection as Unspecified — a metadata-read limitation.)*
+
+**Tier 3 complete** for the plugin's intended scope. Remaining optional follow-up: blood-pressure and
+meal (food) correlations as grouped samples — currently systolic/diastolic and nutrients are written
+individually.
 - [~] Mindfulness — `RequestMindfulnessPermissionAsync` / `ReadMindfulnessAsync` / `WriteMindfulnessAsync`.
       *(iOS `MindfulSession` implemented; Android throws pending a newer Health Connect binding that
       exposes `MindfulnessSessionRecord`.)*
