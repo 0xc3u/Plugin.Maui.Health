@@ -32,6 +32,17 @@ public class BarChartView : GraphicsView, IDrawable
 		set => SetValue(BarColorProperty, value);
 	}
 
+	/// <summary>Compact mode: tight padding, no axis labels — for small dashboard tiles.</summary>
+	public static readonly BindableProperty CompactProperty = BindableProperty.Create(
+		nameof(Compact), typeof(bool), typeof(BarChartView), false,
+		propertyChanged: (b, _, __) => ((BarChartView)b).Invalidate());
+
+	public bool Compact
+	{
+		get => (bool)GetValue(CompactProperty);
+		set => SetValue(CompactProperty, value);
+	}
+
 	public void Draw(ICanvas canvas, RectF rect)
 	{
 		canvas.Antialias = true;
@@ -43,9 +54,10 @@ public class BarChartView : GraphicsView, IDrawable
 			return;
 		}
 
-		const float pad = 14f;
+		float pad = Compact ? 4f : 14f;
+		float labelSpace = Compact ? 0f : 16f;
 		float left = rect.Left + pad, right = rect.Right - pad;
-		float top = rect.Top + pad, bottom = rect.Bottom - pad - 16f;
+		float top = rect.Top + pad, bottom = rect.Bottom - pad - labelSpace;
 		float w = right - left, h = bottom - top;
 
 		double max = points.Max(p => p.Value);
@@ -74,7 +86,7 @@ public class BarChartView : GraphicsView, IDrawable
 			canvas.FillColor = BarColor;
 			canvas.FillRoundedRectangle(x, y, barW, barH, corner);
 
-			if (!string.IsNullOrEmpty(points[i].Label))
+			if (!Compact && !string.IsNullOrEmpty(points[i].Label))
 				canvas.DrawString(points[i].Label, cx - slot / 2f, bottom + 2, slot, 14,
 					HorizontalAlignment.Center, VerticalAlignment.Center);
 		}

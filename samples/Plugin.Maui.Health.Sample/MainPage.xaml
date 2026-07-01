@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
              xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
-             xmlns:m2="clr-namespace:Plugin.Maui.Health.Sample.Models"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
              x:DataType="vm:MainPageViewModel"
              BackgroundColor="{StaticResource PageBackground}"
@@ -18,12 +17,13 @@
                 <Label Text="Powered by Plugin.Maui.Health" Style="{StaticResource MutedLabel}" />
             </VerticalStackLayout>
 
-            <!-- Steps showcase: goal ring + weekly bar chart -->
+            <!-- Today: goal ring + steps + exercise, with the weekly steps chart -->
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="16">
+                    <Label Text="Today" Style="{StaticResource SectionHeader}" />
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
                         <charts:RingChartView Grid.Column="0"
-                                              WidthRequest="110" HeightRequest="110"
+                                              WidthRequest="104" HeightRequest="104"
                                               Progress="{Binding StepsGoalProgress}"
                                               ValueText="{Binding StepsGoalText}"
                                               Caption="Goal"
@@ -32,33 +32,92 @@
                             <Label Text="Steps today" Style="{StaticResource MetricCaption}" />
                             <Label Text="{Binding StepsTodayText}" Style="{StaticResource MetricValue}" />
                             <Label Text="Goal 10,000" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding ExerciseText}" Style="{StaticResource MutedLabel}" Margin="0,6,0,0" />
                         </VerticalStackLayout>
                     </Grid>
-                    <Label Text="This week" Style="{StaticResource SectionHeader}" />
+                    <Label Text="This week" Style="{StaticResource MetricCaption}" />
                     <charts:BarChartView Entries="{Binding StepsThisWeek}" BarColor="{StaticResource AccentCyan}" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Explore -->
-            <Label Text="Explore" Style="{StaticResource SectionHeader}" />
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding MenuItems}" Spacing="12">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="m2:MenuItem">
-                        <Border Style="{StaticResource Card}" Padding="16">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer NumberOfTapsRequired="1"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainPageViewModel}}, Path=OpenViewCommand}"
-                                    CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                <Label Grid.Column="0" Text="{Binding Title}" FontSize="16" FontAttributes="Bold"
-                                       TextColor="{StaticResource TextPrimary}" VerticalOptions="Center" />
-                                <Label Grid.Column="1" Text="›" FontSize="26" TextColor="{StaticResource TextSecondary}" VerticalOptions="Center" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
+            <!-- At a glance: live tiles that tap through to their detail screen -->
+            <Label Text="At a glance" Style="{StaticResource SectionHeader}" />
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+
+                <!-- Heart rate -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="HeartRateView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Heart rate" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding HeartRateText}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource AccentPink}" />
+                        <charts:LineChartView Entries="{Binding HeartRateTrend}" LineColor="{StaticResource AccentPink}" ShowDots="False" Compact="True" HeightRequest="44" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Sleep -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="SleepView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Sleep" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding SleepText}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource AccentViolet}" />
+                        <charts:SleepStagesView Stages="{Binding SleepStages}" HeightRequest="44" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Weight -->
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="BodyMeasurementsView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Weight" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding WeightText}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource AccentBlue}" />
+                        <charts:LineChartView Entries="{Binding WeightTrend}" LineColor="{StaticResource AccentBlue}" ShowDots="False" Compact="True" HeightRequest="44" />
+                        <Label Text="{Binding WeightTrendText}" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Workouts -->
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="WorkoutsView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Last workout" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding WorkoutText}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource AccentGreen}" />
+                        <Label Text="{Binding WorkoutSubText}" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Vitamins -->
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="VitaminsView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Vitamins" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding VitaminsText}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource AccentAmber}" />
+                        <charts:BarChartView Entries="{Binding VitaminLevels}" BarColor="{StaticResource AccentAmber}" Compact="True" HeightRequest="44" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Permissions -->
+                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Card}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" CommandParameter="PermissionsView" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Permissions" Style="{StaticResource MetricCaption}" />
+                        <Label Text="{Binding PermissionsText}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource AccentCyan}" />
+                        <Label Text="Batched request &amp; check" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </Grid>
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
 

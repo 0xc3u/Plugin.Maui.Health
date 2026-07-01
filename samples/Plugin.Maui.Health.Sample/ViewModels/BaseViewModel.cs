@@ -37,6 +37,28 @@ public partial class BaseViewModel : ObservableObject, IViewModel
 	// Guards against prompting more than once per app session.
 	static bool corePermissionsRequested;
 
+	const PermissionType RW = PermissionType.Read | PermissionType.Write;
+
+	/// <summary>
+	/// Every quantity permission the sample's dashboard tiles read/write. Shared so the request flow and
+	/// the Permissions status tile agree on exactly the same set. (Workout and sleep use their own
+	/// dedicated permission calls.)
+	/// </summary>
+	public static readonly (HealthParameter, PermissionType)[] CorePermissionRequests =
+	{
+		(HealthParameter.StepCount, RW),
+		(HealthParameter.HeartRate, RW),
+		(HealthParameter.BodyMass, RW),
+		(HealthParameter.Height, RW),
+		(HealthParameter.BodyFatPercentage, RW),
+		(HealthParameter.DietaryVitaminC, RW),
+		(HealthParameter.DietaryVitaminD, RW),
+		(HealthParameter.DietaryVitaminE, RW),
+		(HealthParameter.DietaryVitaminB6, RW),
+		(HealthParameter.DietaryVitaminB12, RW),
+		(HealthParameter.DietaryVitaminK, RW),
+	};
+
 	/// <summary>
 	/// Requests every permission the sample uses in a single prompt. Doing this once up front avoids
 	/// a string of consecutive consent prompts (which on iOS can hang the app). Subsequent per-screen
@@ -49,25 +71,9 @@ public partial class BaseViewModel : ObservableObject, IViewModel
 
 		corePermissionsRequested = true;
 
-		const PermissionType rw = PermissionType.Read | PermissionType.Write;
-		var requests = new (HealthParameter, PermissionType)[]
-		{
-			(HealthParameter.StepCount, rw),
-			(HealthParameter.HeartRate, rw),
-			(HealthParameter.BodyMass, rw),
-			(HealthParameter.Height, rw),
-			(HealthParameter.BodyFatPercentage, rw),
-			(HealthParameter.DietaryVitaminC, rw),
-			(HealthParameter.DietaryVitaminD, rw),
-			(HealthParameter.DietaryVitaminE, rw),
-			(HealthParameter.DietaryVitaminB6, rw),
-			(HealthParameter.DietaryVitaminB12, rw),
-			(HealthParameter.DietaryVitaminK, rw),
-		};
-
 		try
 		{
-			await Health.RequestPermissionsAsync(requests);
+			await Health.RequestPermissionsAsync(CorePermissionRequests);
 		}
 		catch (Plugin.Maui.Health.Exceptions.HealthException)
 		{

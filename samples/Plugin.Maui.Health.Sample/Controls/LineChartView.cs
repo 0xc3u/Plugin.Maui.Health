@@ -45,6 +45,17 @@ public class LineChartView : GraphicsView, IDrawable
 		set => SetValue(ShowDotsProperty, value);
 	}
 
+	/// <summary>Sparkline mode: tight padding, no axis labels — for small dashboard tiles.</summary>
+	public static readonly BindableProperty CompactProperty = BindableProperty.Create(
+		nameof(Compact), typeof(bool), typeof(LineChartView), false,
+		propertyChanged: (b, _, __) => ((LineChartView)b).Invalidate());
+
+	public bool Compact
+	{
+		get => (bool)GetValue(CompactProperty);
+		set => SetValue(CompactProperty, value);
+	}
+
 	public void Draw(ICanvas canvas, RectF rect)
 	{
 		canvas.Antialias = true;
@@ -56,9 +67,10 @@ public class LineChartView : GraphicsView, IDrawable
 			return;
 		}
 
-		const float pad = 14f;
+		float pad = Compact ? 4f : 14f;
+		float labelSpace = Compact ? 0f : 16f; // room for first/last labels
 		float left = rect.Left + pad, right = rect.Right - pad;
-		float top = rect.Top + pad, bottom = rect.Bottom - pad - 16f; // leave room for labels
+		float top = rect.Top + pad, bottom = rect.Bottom - pad - labelSpace;
 		float w = right - left, h = bottom - top;
 
 		double min = points.Min(p => p.Value);
@@ -107,7 +119,10 @@ public class LineChartView : GraphicsView, IDrawable
 			}
 		}
 
-		// First / last labels.
+		// First / last labels (omitted in compact/sparkline mode).
+		if (Compact)
+			return;
+
 		canvas.FontColor = Color.FromArgb("#9AA0AE");
 		canvas.FontSize = 11f;
 		if (!string.IsNullOrEmpty(points[0].Label))
