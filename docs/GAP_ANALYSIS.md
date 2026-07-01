@@ -147,7 +147,9 @@ aggregation API.
       time range. Round-trip verified.)*
 - [ ] `UpdateAsync`/upsert (with client dedup id).
 - [x] Batch write — `WriteAllAsync`. *(One `SaveObjects` / `InsertRecords`. Round-trip verified.)*
-- [ ] Data provenance (device, recording method, source filter).
+- [x] Data provenance — `Sample.Device` + `Sample.RecordingMethod`, and `Source` now reports the real
+      data-origin package (Android) / source name (iOS). *(Verified: manual-entry seed reads back as
+      `method=Manual`, source = app package.)* Native source-filtering on reads remains a follow-up.
 
 ### Tier 3 — differentiating
 - [ ] Background/observer + change-based sync (+ Android background/history permissions & feature gating).

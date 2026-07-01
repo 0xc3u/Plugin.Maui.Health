@@ -373,7 +373,9 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `Until` | `DateTimeOffset?` | Sample end time |
 | `Value` | `double?` | The numeric value |
 | `Unit` | `string?` | Unit string (e.g. `"kg"`, `"count/min"`) |
-| `Source` | `string?` | App or device that recorded the sample |
+| `Source` | `string?` | App/package that recorded the sample (data origin) |
+| `Device` | `string?` | Recording device name/model, when reported |
+| `RecordingMethod` | `RecordingMethod` | `Unknown` / `Manual` / `Automatic` / `ActivelyRecorded` |
 | `Description` | `string` | Human-readable label |
 
 **`WorkoutSession`** — returned by workout read methods:

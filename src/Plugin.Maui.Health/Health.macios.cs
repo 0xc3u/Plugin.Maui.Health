@@ -769,12 +769,12 @@ partial class HealthDataProviderImplementation : IHealth
 						HKUnit hkUnit = GetHKUnit(unit);
 						foreach (var hkSample in (results ?? Array.Empty<HKSample>()).OfType<HKQuantitySample>())
 						{
-							var source = hkSample.Source?.Name ?? string.Empty;
+							var (source, device, method) = Provenance(hkSample);
 							healthValues.Add(new Sample(ToDateTimeOffset(hkSample.StartDate), ToDateTimeOffset(hkSample.EndDate),
 								hkSample.Quantity.GetDoubleValue(hkUnit),
 								source,
 								unit,
-								description: hkSample.Quantity.Description));
+								description: hkSample.Quantity.Description) { Device = device, RecordingMethod = method });
 						}
 						tcs.TrySetResult(healthValues);
 					}
@@ -973,6 +973,18 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// Extracts provenance (source app, device, recording method) from a HealthKit sample.
+	static (string source, string? device, RecordingMethod method) Provenance(HKSample sample)
+	{
+		var source = sample.SourceRevision?.Source?.Name ?? sample.Source?.Name ?? string.Empty;
+		var device = sample.Device?.Name;
+		var wasUserEntered = sample.Metadata?.WasUserEntered;
+		var method = wasUserEntered is null
+			? RecordingMethod.Unknown
+			: (wasUserEntered.Value ? RecordingMethod.Manual : RecordingMethod.Automatic);
+		return (source, string.IsNullOrEmpty(device) ? null : device, method);
+	}
+
 	static HKUnit GetHKUnit(string unit)
 	{
 		HKUnit hkUnit;
@@ -1014,13 +1026,15 @@ partial class HealthDataProviderImplementation : IHealth
 						{
 							HKUnit hkUnit = GetHKUnit(unit);
 
+							var (source, device, method) = Provenance(sample);
 							Sample returnSample = new(
 								from: ToDateTimeOffset(sample.StartDate),
 								until: ToDateTimeOffset(sample.EndDate),
 								value: sample.Quantity.GetDoubleValue(hkUnit),
-								source: sample.Source.Name,
+								source: source,
 								unit: unit,
-								description: sample.Quantity.Description);
+								description: sample.Quantity.Description)
+							{ Device = device, RecordingMethod = method };
 
 							tcs.TrySetResult(returnSample);
 						}

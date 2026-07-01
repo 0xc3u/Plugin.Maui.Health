@@ -1473,6 +1473,39 @@ partial class HealthDataProviderImplementation : IHealth
 		}
 	}
 
+	// Extracts provenance (source app, device, recording method) from a record's Health Connect metadata.
+	static (string source, string? device, RecordingMethod method) Provenance(Java.Lang.Object record)
+	{
+		var meta = (record as IRecord)?.Metadata;
+		if (meta is null)
+		{
+			return ("Health Connect", null, RecordingMethod.Unknown);
+		}
+
+		var source = string.IsNullOrEmpty(meta.DataOrigin?.PackageName) ? "Health Connect" : meta.DataOrigin!.PackageName;
+		var device = meta.Device?.Model;
+		if (string.IsNullOrEmpty(device))
+		{
+			device = meta.Device?.Manufacturer;
+		}
+
+		var method = meta.RecordingMethod switch
+		{
+			Metadata.RecordingMethodManualEntry => RecordingMethod.Manual,
+			Metadata.RecordingMethodAutomaticallyRecorded => RecordingMethod.Automatic,
+			Metadata.RecordingMethodActivelyRecorded => RecordingMethod.ActivelyRecorded,
+			_ => RecordingMethod.Unknown,
+		};
+
+		return (source, string.IsNullOrEmpty(device) ? null : device, method);
+	}
+
+	static Sample SampleFrom(Java.Lang.Object record, DateTimeOffset from, DateTimeOffset until, double value, string unit)
+	{
+		var (source, device, method) = Provenance(record);
+		return new Sample(from, until, value, source, unit) { Device = device, RecordingMethod = method };
+	}
+
 	// Health Connect returns at most 1,000 records per ReadRecords call. Follow the page token so long
 	// ranges / high-frequency sensors aren't silently truncated at 1,000.
 	static async Task<List<T>> ReadAllPagesAsync<T>(
@@ -1503,7 +1536,7 @@ partial class HealthDataProviderImplementation : IHealth
 	{
 		var records = await ReadAllPagesAsync<T>(client, filter).ConfigureAwait(false);
 		return records
-			.Select(r => { var (v, f, u) = extract(r); return new Sample(f, u, v, "Health Connect", unit); })
+			.Select(r => { var (v, f, u) = extract(r); return SampleFrom(r, f, u, v, unit); })
 			.ToList();
 	}
 
@@ -1516,7 +1549,7 @@ partial class HealthDataProviderImplementation : IHealth
 	{
 		var records = await ReadAllPagesAsync<T>(client, filter).ConfigureAwait(false);
 		return records
-			.Select(r => { var (v, t) = extract(r); return new Sample(t, t, v, "Health Connect", unit); })
+			.Select(r => { var (v, t) = extract(r); return SampleFrom(r, t, t, v, unit); })
 			.ToList();
 	}
 
@@ -1534,7 +1567,7 @@ partial class HealthDataProviderImplementation : IHealth
 		var respObj = await InvokeCoroutine(c => client.ReadRecords(req, c)).ConfigureAwait(false);
 		var resp = (ReadRecordsResponse)respObj!;
 		return resp.Records.OfType<T>()
-			.Select(r => { var (v, f, u) = extract(r); return new Sample(f, u, v, "Health Connect", unit); })
+			.Select(r => { var (v, f, u) = extract(r); return SampleFrom(r, f, u, v, unit); })
 			.ToList();
 	}
 
@@ -1545,10 +1578,11 @@ partial class HealthDataProviderImplementation : IHealth
 		var result = new List<Sample>();
 		foreach (var rec in records)
 		{
+			var (source, device, method) = Provenance(rec);
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
-					(double)s.BeatsPerMinute, "Health Connect", unit));
+					(double)s.BeatsPerMinute, source, unit) { Device = device, RecordingMethod = method });
 			}
 		}
 		return result;
@@ -1561,10 +1595,11 @@ partial class HealthDataProviderImplementation : IHealth
 		var result = new List<Sample>();
 		foreach (var rec in records)
 		{
+			var (source, device, method) = Provenance(rec);
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
-					s.Speed.MetersPerSecond, "Health Connect", unit));
+					s.Speed.MetersPerSecond, source, unit) { Device = device, RecordingMethod = method });
 			}
 		}
 		return result;
@@ -1577,10 +1612,11 @@ partial class HealthDataProviderImplementation : IHealth
 		var result = new List<Sample>();
 		foreach (var rec in records)
 		{
+			var (source, device, method) = Provenance(rec);
 			foreach (var s in rec.Samples)
 			{
 				result.Add(new Sample(s.Time.ToDateTimeUtc(), s.Time.ToDateTimeUtc(),
-					s.Power.Watts, "Health Connect", unit));
+					s.Power.Watts, source, unit) { Device = device, RecordingMethod = method });
 			}
 		}
 		return result;
@@ -1596,9 +1632,8 @@ partial class HealthDataProviderImplementation : IHealth
 			var value = ExtractNutritionField(param, rec);
 			if (value.HasValue)
 			{
-				result.Add(new Sample(
-					rec.StartTime.ToDateTimeUtc(), rec.EndTime.ToDateTimeUtc(),
-					value.Value, "Health Connect", unit));
+				result.Add(SampleFrom(rec, rec.StartTime.ToDateTimeUtc(), rec.EndTime.ToDateTimeUtc(),
+					value.Value, unit));
 			}
 		}
 		return result;

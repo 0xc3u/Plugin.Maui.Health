@@ -1,3 +1,5 @@
+using Plugin.Maui.Health.Enums;
+
 namespace Plugin.Maui.Health.Models;
 
 /// <summary>
@@ -5,6 +7,12 @@ namespace Plugin.Maui.Health.Models;
 /// </summary>
 public sealed record Sample
 {
+	/// <summary>The recording device (name/model), when the platform reports one.</summary>
+	public string? Device { get; init; }
+
+	/// <summary>How the sample was recorded (manual entry, automatic, actively recorded).</summary>
+	public RecordingMethod RecordingMethod { get; init; }
+
 	/// <summary>
 	/// Gets the starting date and time of the sample.
 	/// </summary>
