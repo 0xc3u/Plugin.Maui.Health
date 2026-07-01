@@ -741,19 +741,17 @@ weekly steps bar chart and a weight-trend line chart). On first launch it seeds 
 into the device's health store via the plugin and reads it back, so every chart reflects genuine
 round-tripped data on **both** Android (Health Connect) and iOS (HealthKit):
 
+**Dashboard** — goal ring + weekly steps bar chart:
+
 | Android (Health Connect) | iOS (HealthKit) |
 |---|---|
 | ![Sample app dashboard on Android](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_android_dashboard.png?raw=true) | ![Sample app dashboard on iOS](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_ios_dashboard.png?raw=true) |
 
-<details>
-<summary>More screenshots</summary>
+**Detail screens** — BMI ring + weight-trend line chart, and a vitamin-intake bar chart:
 
-![Screenshot of the sample app - Dashboard](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_dashboard.png?raw=true)
-![Screenshot of the sample app - Vitamins](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_vitamins.png?raw=true)
-![Screenshot of the sample app - Body Measurements](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_sample_bodym.png?raw=true)
-![Screenshot of the permission granted to the sample app](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/plugin_permissions.png?raw=true)
-
-</details>
+| Body Measurements | Vitamins |
+|---|---|
+| ![Body Measurements screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_body_measurements.png?raw=true) | ![Vitamins screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_vitamins.png?raw=true) |
 
 Try the sample app to test the plugin on your own device.
 
