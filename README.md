@@ -1,4 +1,5 @@
-![](nuget.png)
+<img src="https://github.com/0xc3u/Plugin.Maui.Health/blob/main/src/Plugin.Maui.Health/icon.png?raw=true" alt="Plugin.Maui.Health" width="120" height="120" />
+
 # Plugin.Maui.Health
 
 `Plugin.Maui.Health` provides the ability to access personal health data in your .NET MAUI application.
@@ -291,10 +292,10 @@ Apps that skip these steps will be rejected during Play Store review.
 
 ## Dependency Injection
 
-Register the plugin with the `MauiAppBuilder`:
+Register the plugin with the `MauiAppBuilder` (in `MauiProgram.cs`):
 
 ```csharp
-builder.Services.AddSingleton(Health.Default);
+builder.Services.AddSingleton(HealthDataProvider.Default);
 ```
 
 You can then depend on `IHealth` in your ViewModels:
@@ -313,10 +314,10 @@ public class HealthViewModel
 
 ## Static Usage
 
-Alternatively, use `Health.Default` directly without DI:
+Alternatively, use `HealthDataProvider.Default` directly without DI:
 
 ```csharp
-var stepsCount = await Health.Default.ReadCountAsync(
+var stepsCount = await HealthDataProvider.Default.ReadCountAsync(
     HealthParameter.StepCount,
     DateTimeOffset.Now.AddDays(-1),
     DateTimeOffset.Now);
@@ -337,6 +338,7 @@ var stepsCount = await Health.Default.ReadCountAsync(
 | Method | Description |
 |--------|-------------|
 | `RequestPermissionAsync(param, type)` | Requests the specified read/write permission via the platform consent UI and returns whether it ended up granted. The cross-platform way to obtain consent. |
+| `RequestPermissionsAsync(requests)` | Requests **several** parameters in a single consent prompt. Preferred over multiple `RequestPermissionAsync` calls — on iOS, presenting several HealthKit sheets in a row can hang the app. |
 | `RequestWorkoutPermissionAsync(type)` | Requests read/write access to workout sessions and GPS routes via the consent UI. |
 | `CheckPermissionAsync(param, type)` | Checks whether the specified read/write permission is currently granted (does not prompt on Android). |
 | `CheckWorkoutPermissionAsync(type)` | Checks whether workout (exercise) read/write permission is currently granted. |
@@ -379,6 +381,23 @@ All async methods accept an optional `CancellationToken` as the last parameter.
 | `Title` | `string?` | Display name (Android only; always `null` on iOS) |
 | `Route` | `IReadOnlyList<RoutePoint>` | GPS track points |
 
+**`RoutePoint`** — a single GPS sample within a `WorkoutSession.Route`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Time` | `DateTimeOffset` | Timestamp of the point |
+| `Latitude` / `Longitude` | `double` | Coordinates |
+| `AltitudeInMeters` | `double?` | Altitude |
+| `HorizontalAccuracyInMeters` / `VerticalAccuracyInMeters` | `double?` | Accuracy |
+
+### Enums
+
+| Enum | Values |
+|------|--------|
+| `PermissionType` | `Read`, `Write` — combine with the bitwise OR (`PermissionType.Read \| PermissionType.Write`). |
+| `HealthParameter` | ~100 values (steps, heart rate, body metrics, blood values, nutrition/vitamins, mobility …). See the matrix below. |
+| `WorkoutType` | Activity types (`Running`, `Cycling`, `Swimming`, …). Use `WorkoutType.Other` to match/return **all** types. |
+
 ### Units
 
 Use the `Constants.Units` static class to avoid typos in unit strings:
@@ -399,12 +418,38 @@ Units.Concentration.MillimolesPerLiter               // for BloodGlucose
 
 ### Request permissions
 
+Always check `IsSupported` first, then request the permissions you need. The plugin presents the platform
+consent UI (HealthKit sheet on iOS, Health Connect screen on Android) and maps parameters to the right
+native permissions — no platform-specific code, launcher, or permission strings required.
+
 ```csharp
-// Presents the platform consent UI when needed and returns the resulting grant state.
-// No platform-specific code, launcher, or permission-string mapping required.
+if (!health.IsSupported)
+    return; // Health Connect not installed (Android 11–13) or backend unavailable
+
+// Single parameter
 var granted = await health.RequestPermissionAsync(
     HealthParameter.StepCount,
     PermissionType.Read | PermissionType.Write);
+```
+
+**Requesting several permissions? Batch them** — this shows a single consent prompt and avoids an iOS hang
+that can occur when multiple HealthKit sheets are presented back-to-back:
+
+```csharp
+var granted = await health.RequestPermissionsAsync(new[]
+{
+    (HealthParameter.StepCount,   PermissionType.Read | PermissionType.Write),
+    (HealthParameter.BodyMass,    PermissionType.Read | PermissionType.Write),
+    (HealthParameter.HeartRate,   PermissionType.Read),
+    (HealthParameter.DietaryVitaminC, PermissionType.Read | PermissionType.Write),
+});
+```
+
+Check the current grant state **without** prompting (Android only — on iOS checking and requesting are the
+same HealthKit operation):
+
+```csharp
+bool granted = await health.CheckPermissionAsync(HealthParameter.HeartRate, PermissionType.Read);
 ```
 
 ### Read step count (last 24 hours)
@@ -458,6 +503,72 @@ var workouts = await health.ReadWorkoutsAsync(
 foreach (var w in workouts)
 {
     Console.WriteLine($"{w.WorkoutType}: {w.TotalDistanceInMeters:F0} m, {w.Route.Count} GPS points");
+}
+```
+
+### Statistics over a range (average / min / max)
+
+```csharp
+var from = DateTimeOffset.Now.AddDays(-7);
+var until = DateTimeOffset.Now;
+
+double? avgHr = await health.ReadAverageAsync(HealthParameter.HeartRate, from, until, Units.Others.CountPerMinute);
+double? minHr = await health.ReadMinAsync(HealthParameter.HeartRate, from, until, Units.Others.CountPerMinute);
+double? maxHr = await health.ReadMaxAsync(HealthParameter.HeartRate, from, until, Units.Others.CountPerMinute);
+```
+
+### Most recent value within a range
+
+```csharp
+// Latest reading inside a window (null if none in range)
+double? latestGlucose = await health.ReadLatestAsync(
+    HealthParameter.BloodGlucose, from, until, Units.Concentration.MillimolesPerLiter);
+
+// Latest reading ever recorded, with full sample metadata
+Sample? sample = await health.ReadLatestAvailableAsync(HealthParameter.BodyMass, Units.Mass.Kilograms);
+```
+
+### Write a workout (with an optional GPS route)
+
+```csharp
+var session = new WorkoutSession
+{
+    WorkoutType = WorkoutType.Running,
+    From = DateTimeOffset.Now.AddMinutes(-30),
+    Until = DateTimeOffset.Now,
+    TotalDistanceInMeters = 5200,
+    EnergyBurnedInCalories = 410,
+    Route = new List<RoutePoint>
+    {
+        new() { Time = DateTimeOffset.Now.AddMinutes(-30), Latitude = 47.37, Longitude = 8.54, AltitudeInMeters = 408 },
+        new() { Time = DateTimeOffset.Now,                 Latitude = 47.38, Longitude = 8.55, AltitudeInMeters = 412 },
+    }
+};
+
+if (await health.RequestWorkoutPermissionAsync(PermissionType.Write))
+    await health.WriteWorkoutAsync(session);
+```
+
+### Error handling
+
+Every method throws a single exception type — `HealthException` — for hard failures (unsupported
+parameter, backend unavailable, native error). It carries context and preserves the original platform
+error as `InnerException`. Reads simply return `null`/`0`/an empty list when there is no data (that is not
+an error).
+
+```csharp
+using Plugin.Maui.Health.Exceptions;
+
+try
+{
+    var steps = await health.ReadCountAsync(HealthParameter.StepCount, from, until);
+}
+catch (HealthException ex)
+{
+    // ex.Message is human-readable, e.g.
+    //   "Plugin.Maui.Health: ReadCountAsync failed on Android: <native detail>"
+    Console.WriteLine($"{ex.Operation} on {ex.Platform} [{ex.Parameter}]: {ex.Message}");
+    Console.WriteLine(ex.InnerException); // original HealthKit / Health Connect error
 }
 ```
 
