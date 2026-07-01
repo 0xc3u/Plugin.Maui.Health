@@ -3,9 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Plugin.Maui.Health.Sample.ViewModels"
              xmlns:charts="clr-namespace:Plugin.Maui.Health.Sample.Controls"
+             xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
              x:Class="Plugin.Maui.Health.Sample.MainPage"
              x:DataType="vm:MainPageViewModel"
              BackgroundColor="{StaticResource PageBackground}"
+             Shell.NavBarIsVisible="False"
+             ios:Page.UseSafeArea="True"
              Title="Plugin.Maui.Health Sample">
 
     <ScrollView>
