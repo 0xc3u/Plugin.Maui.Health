@@ -1,3 +1,17 @@
+# [1.3.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.2.0...v1.3.0) (2026-07-01)
+
+
+### Bug Fixes
+
+* persist and read iOS workout distance & energy (iOS 18+) ([d2855a9](https://github.com/0xc3u/Plugin.Maui.Health/commit/d2855a9b37b8f95c196a9b99522691422feace75))
+
+
+### Features
+
+* add sleep data support with sample screen ([73d4d39](https://github.com/0xc3u/Plugin.Maui.Health/commit/73d4d3934d9c4fd4565eb74a2bdc2088afd8b15d))
+* **sample:** add Heart Rate time-series screen ([182461f](https://github.com/0xc3u/Plugin.Maui.Health/commit/182461fa7f53bd46d0d5fd5bbd4952e566900837))
+* **sample:** add Workouts screen with GPS route map ([748fc01](https://github.com/0xc3u/Plugin.Maui.Health/commit/748fc0148f423261a8b7be669047aa51ab36abf1))
+
 # [1.2.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.1.0...v1.2.0) (2026-07-01)
 
 
