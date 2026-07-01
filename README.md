@@ -747,11 +747,11 @@ round-tripped data on **both** Android (Health Connect) and iOS (HealthKit):
 |---|---|
 | ![Sample app dashboard on Android](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_android_dashboard.png?raw=true) | ![Sample app dashboard on iOS](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_ios_dashboard.png?raw=true) |
 
-**Detail screens** — BMI ring + weight-trend line chart, and a vitamin-intake bar chart:
+**Detail screens** — BMI ring + weight-trend line chart, a heart-rate time-series line chart, and a vitamin-intake bar chart:
 
-| Body Measurements | Vitamins |
-|---|---|
-| ![Body Measurements screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_body_measurements.png?raw=true) | ![Vitamins screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_vitamins.png?raw=true) |
+| Body Measurements | Heart Rate | Vitamins |
+|---|---|---|
+| ![Body Measurements screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_body_measurements.png?raw=true) | ![Heart Rate screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_heart_rate.png?raw=true) | ![Vitamins screen](https://github.com/0xc3u/Plugin.Maui.Health/blob/main/screenshots/sample_vitamins.png?raw=true) |
 
 Try the sample app to test the plugin on your own device.
 
