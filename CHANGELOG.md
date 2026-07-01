@@ -1,3 +1,19 @@
+# [1.1.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.0.0...v1.1.0) (2026-07-01)
+
+
+### Bug Fixes
+
+* batch permission requests and stop the iOS sample spinner hanging ([bdb75f7](https://github.com/0xc3u/Plugin.Maui.Health/commit/bdb75f7a80bab9940cc92fec016b8f8b535b2a03))
+* crash on Android 14+ in ReadAllAsync/ReadLatestAvailableAsync (JNI ref) ([9711631](https://github.com/0xc3u/Plugin.Maui.Health/commit/9711631c2fad4ad3b95369c08ff91d0fff835e80))
+* prevent iOS HealthKit callbacks from hanging the caller ([1a97568](https://github.com/0xc3u/Plugin.Maui.Health/commit/1a9756894e2f352e504964db261b9676a083ea5b))
+* surface clear errors and stop ReadRecords hang on Android ([d2eb7ed](https://github.com/0xc3u/Plugin.Maui.Health/commit/d2eb7ed4b51caaa05b6f50a1264cb22de9cf108a))
+
+
+### Features
+
+* **sample:** card-based UI with MAUI.Graphics charts ([0d525f7](https://github.com/0xc3u/Plugin.Maui.Health/commit/0d525f79d7da1b1c60c5c2c23c53c8fd5e9bcdf2))
+* **sample:** seed and read real health data on Android and iOS ([b1b7cb4](https://github.com/0xc3u/Plugin.Maui.Health/commit/b1b7cb454a4bfb73bfba6a74679a0dc154dd37a7))
+
 # 1.0.0 (2026-06-30)
 
 
