@@ -119,6 +119,15 @@ while IFS=$'\x1f' read -r -d $'\x1e' sha subject body; do
             FIXES+="${entry}"$'\n'
             [[ "$BUMP" == "none" ]] && BUMP="patch"
             ;;
+        # A revert undoes shipped behaviour, so it is a release in its own
+        # right. git writes the subject as Revert "<original subject>", which
+        # is not a conventional type and would otherwise fall through to
+        # "nothing to release" -- leaving the revert unpublished while the
+        # change it undoes stays in the released version.
+        [Rr]evert[\ :]*|revert\(*)
+            FIXES+="${entry}"$'\n'
+            [[ "$BUMP" == "none" ]] && BUMP="patch"
+            ;;
     esac
 done < <(git log --format="%H%x1f%s%x1f%b%x1e" ${RANGE:+"$RANGE"})
 
