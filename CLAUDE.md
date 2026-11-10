@@ -40,7 +40,9 @@ There is **no test project**. Validation is done by running the sample app.
 `.github/workflows/ci.yml` builds on push and runs **semantic-release** (`.releaserc`); versioning is
 driven by **Conventional Commits** (`feat:`→minor, `fix:`→patch, `BREAKING CHANGE:`→major, `build:`/`ci:`/
 `docs:`→no release). Tagging (`vX.Y.Z`) triggers `release-nuget.yml` which packs & pushes to NuGet.
-Requires repo secrets `GH_TOKEN` (PAT) + `NUGET_API_KEY` and a GitHub environment named `Release`.
+NuGet publishing uses **trusted publishing** (OIDC via `NuGet/login@v1`, no long-lived API key): it
+needs the repo secret `NUGET_USER` (the nuget.org profile name) and a matching trusted-publishing policy
+on nuget.org for this repo + `release.yml`.
 Commit messages end with the `Co-Authored-By` trailer; commit only when asked, and never push without
 asking (a push publishes a real NuGet version).
 

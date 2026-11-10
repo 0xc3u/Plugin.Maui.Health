@@ -147,6 +147,15 @@ jobs:
     runs-on: windows-latest
     needs: [ build, release ]
 
+    # Trusted publishing: nuget.org trusts this repository and this workflow
+    # file, so the job asks GitHub for an OIDC token and trades it for a
+    # short-lived API key -- there is no long-lived key in the repository
+    # secrets any more. The OIDC token needs id-token: write; the checkout
+    # still needs contents: read.
+    permissions:
+      contents: read
+      id-token: write
+
     # After a release, or on a dispatch that names a version to publish
     # again. `always()` is needed because the release job produces no release
     # on a dispatch, and a skipped dependency would otherwise skip this too.
@@ -199,11 +208,20 @@ jobs:
 
           echo "Packed $count project(s) at $VERSION" >> "$GITHUB_STEP_SUMMARY"
 
+      # Right before the push on purpose: the key this hands out is valid for
+      # about an hour, and the steps above can take a while.
+      # NUGET_USER is the nuget.org profile name (not a key).
+      - name: Log in to NuGet (trusted publishing)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push
         shell: bash
         env:
           VERSION: ${{ steps.target.outputs.version }}
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           set -uo pipefail
           shopt -s nullglob
