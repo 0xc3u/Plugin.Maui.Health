@@ -1,3 +1,11 @@
+## [1.5.1](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.5.0...v1.5.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* Cast the result of `GetGrantedPermissions()` as java.util.ICollection instead of java.util.AbstractCollection ([#10](https://github.com/0xc3u/Plugin.Maui.Health/issues/10)) ([1479fd5](https://github.com/0xc3u/Plugin.Maui.Health/commit/1479fd58707620ba708abcc7851427ec6925249d)), closes [#9](https://github.com/0xc3u/Plugin.Maui.Health/issues/9)
+* Cast the result of `GetGrantedPermissions()` as java.util.ICollection instead of java.util.AbstractCollection as the later will crash when the method returns kotlin.collections.emptySet() on Android 10 on calling RequestPermissionsAsync ([00c5572](https://github.com/0xc3u/Plugin.Maui.Health/commit/00c5572195c176d0379712f0a19c03aec0c22132))
+
 # [1.5.0](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.4.0...v1.5.0) (2026-07-01)
 
 
