@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.5.1...v1.5.2) (2026-11-10)
+
+### Bug Fixes
+
+* **deps:** update NuGet packages to their latest stable versions ([540315e](https://github.com/0xc3u/Plugin.Maui.Health/commit/540315e7f9d291afb62013d05cd96b311ae72035))
+
+
 ## [1.5.1](https://github.com/0xc3u/Plugin.Maui.Health/compare/v1.5.0...v1.5.1) (2026-11-10)
 
 
