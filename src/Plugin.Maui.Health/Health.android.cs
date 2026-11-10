@@ -133,7 +133,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var granted = new HashSet<string>();
 			if (grantedRaw is Java.Lang.Object rawObj)
 			{
-				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.AbstractCollection>(rawObj)?.Iterator();
+				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.ICollection>(rawObj)?.Iterator();
 				if (iter != null)
 				{
 					while (iter.HasNext)
@@ -214,7 +214,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var granted = new HashSet<string>();
 			if (grantedRaw is Java.Lang.Object rawObj)
 			{
-				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.AbstractCollection>(rawObj)?.Iterator();
+				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.ICollection>(rawObj)?.Iterator();
 				if (iter != null)
 				{
 					while (iter.HasNext)
@@ -323,7 +323,7 @@ partial class HealthDataProviderImplementation : IHealth
 			var granted = new HashSet<string>();
 			if (grantedRaw is Java.Lang.Object rawObj)
 			{
-				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.AbstractCollection>(rawObj)?.Iterator();
+				var iter = Java.Interop.JavaObjectExtensions.JavaCast<Java.Util.ICollection>(rawObj)?.Iterator();
 				if (iter != null)
 				{
 					while (iter.HasNext)
